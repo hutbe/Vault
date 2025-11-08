@@ -1,0 +1,35 @@
+
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb-server
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    env_file:
+      - ./mariadb.env # 从 .env 文件加载环境变量
+    # 如果上面文件 mariadb.env 中的变量名和容器需要的变量名一致，就不需要下面的 environment 了
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-admin} # 如果变量不存在，使用默认值
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mydb}
+      MYSQL_USER: ${MYSQL_USER:-admin}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-admin}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data:/var/lib/mysql
+      - ./config:/etc/mysql/conf.d
+      - ./initdb:/docker-entrypoint-initdb.d
+    networks:
+      - mariadb-network
+    command: 
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_connections=1000
+
+networks:
+  mariadb-network:
+    driver: bridge
+
+volumes:
+  mariadb-data:
+    driver: local
