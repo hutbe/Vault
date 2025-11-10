@@ -26,8 +26,8 @@ pytorch_python11/
 .spyproject
 
 # MariaDB 数据目录
-data/
-data/*
+mariadb/data/
+mariadb/data/*
 
 # 临时文件和日志
 *.tmp

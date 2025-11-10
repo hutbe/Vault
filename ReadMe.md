@@ -1,10 +1,7 @@
 `docker compose up`
 `docker compose up -d`
-
 `docker compose down`
-
 `mariadb -h 127.0.0.1 -P 3306 -u root -p`
-
 `docker exec -it mariadb-server bash`
 
 

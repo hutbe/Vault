@@ -21,9 +21,9 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-admin}
       TZ: Asia/Shanghai
     volumes:
-      - ./data:/var/lib/mysql
-      - ./config:/etc/mysql/conf.d
-      - ./initdb:/docker-entrypoint-initdb.d
+      - ./mariadb/data:/var/lib/mysql
+      - ./mariadb/config:/etc/mysql/conf.d
+      - ./mariadb/initdb:/docker-entrypoint-initdb.d
     networks:
       - mariadb-network
     command:
