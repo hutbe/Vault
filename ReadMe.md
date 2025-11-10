@@ -1,3 +1,13 @@
+`docker compose up`
+`docker compose up -d`
+
+`docker compose down`
+
+`mariadb -h 127.0.0.1 -P 3306 -u root -p`
+
+`docker exec -it mariadb-server bash`
+
+
 在使用Docker部署MariaDB时，通过挂载这三个文件夹是业界最佳实践，可以实现数据持久化、配置自定义和初始化自动化。下面详细解释这三个文件夹的作用：
 
 ## 1. `~/mariadb/data` - 数据目录

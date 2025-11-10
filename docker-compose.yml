@@ -2,13 +2,18 @@
 services:
   mariadb:
     image: mariadb:latest
+    pull_policy: if_not_present  # 或者使用 if_not_present, always, never
     container_name: mariadb-server
     restart: unless-stopped
     ports:
       - "3306:3306"
     env_file:
-      - ./mariadb.env # 从 .env 文件加载环境变量
-    # 如果上面文件 mariadb.env 中的变量名和容器需要的变量名一致，就不需要下面的 environment 了
+      - .env # 从 .env 文件加载环境变量 容器环境变量默认加载.env 文件, 指定其他文件不会加载到容器环境变量中
+    # 如果上面文件 .env 中的变量名和容器需要的变量名一致，就不需要下面的 environment 了
+    # 如果使用其它的文件名如mariadb.env,里面的变量不会自动加载到容器环境变量中，下面的都会使用默认值
+    # 环境变量加载优先级：
+      # 1. environment 中直接定义的变量
+      # 2. env_file 中加载的变量
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-admin} # 如果变量不存在，使用默认值
       MYSQL_DATABASE: ${MYSQL_DATABASE:-mydb}
@@ -21,7 +26,7 @@ services:
       - ./initdb:/docker-entrypoint-initdb.d
     networks:
       - mariadb-network
-    command: 
+    command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --max_connections=1000
