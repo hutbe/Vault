@@ -20,6 +20,7 @@ env.bak/
 venv.bak/
 conda_env/
 pytorch_python11/
+.idea/
 
 # Spyder project settings
 .spyderproject
