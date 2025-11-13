@@ -5,14 +5,14 @@ services:
     container_name: vault-app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "9090:9090"
     env_file:
       - .env
     depends_on:
       - mariadb
       - nginx
-    volumes:
-      - .:/src
+    networks:
+      - app-network
 
   mariadb:
     image: mariadb:latest
@@ -39,7 +39,7 @@ services:
       - ./mariadb/config:/etc/mysql/conf.d
       - ./mariadb/initdb:/docker-entrypoint-initdb.d
     networks:
-      - src-network
+      - app-network
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -63,7 +63,7 @@ services:
 #    depends_on:
 #      - flask-src
     networks:
-      - src-network
+      - app-network
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost/nginx-health" ]
       interval: 30s

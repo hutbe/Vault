@@ -18,7 +18,9 @@ VOLUME ["/etc/nginx/certs"]
 # RUN rm /etc/nginx/conf.d/default.conf
 #
 # # 复制默认配置
-# COPY default.conf /etc/nginx/conf.d/
+COPY conf.d/ /etc/nginx/conf.d/
+COPY snippets/ /etc/nginx/snippets/
+COPY templates/ /etc/nginx/templates/
 # COPY index.html /usr/share/nginx/html/
 #
 # # 拷贝我们自己的配置
@@ -26,6 +28,9 @@ VOLUME ["/etc/nginx/certs"]
 
 # 复制配置文件
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY conf.d/ /etc/nginx/conf.d/
+COPY snippets/ /etc/nginx/snippets/
+COPY templates/ /etc/nginx/templates/
 
 # 复制SSL证书（如果有的话）
 # COPY certs/ /etc/nginx/certs/

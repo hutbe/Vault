@@ -22,7 +22,7 @@ RUN useradd --create-home --shell /bin/bash app \
 USER app
 
 # Expose port
-EXPOSE 8000
+EXPOSE 9090
 
 # Run gunicorn
 CMD ["gunicorn", "--config", "gunicorn.config.py", "app:app"]
