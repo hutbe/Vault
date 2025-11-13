@@ -1,4 +1,4 @@
-from src import create_app
+from app import create_app
 
 # WSGI 入口（Gunicorn/Uwsgi 可用）
 app = create_app()

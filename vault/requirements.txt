@@ -3,7 +3,7 @@ Flask==3.1.2
 
 # ===== HTTP请求和异步 =====
 requests==2.32.5
-
+gunicorn==23.0.0
 # ===== 数据库 =====
 SQLAlchemy==2.0.44
 
