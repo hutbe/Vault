@@ -28,12 +28,12 @@ def _resolve_config(config_path: str):
     return getattr(module, class_name)
 
 
-# def register_blueprints(app: Flask):
+# def register_blueprints(src: Flask):
 #     from .blueprints.main import bp as main_bp
-#     app.register_blueprint(main_bp)
+#     src.register_blueprint(main_bp)
 #
 #     from .blueprints.api import bp as api_bp
-#     app.register_blueprint(api_bp, url_prefix="/api/v1")
+#     src.register_blueprint(api_bp, url_prefix="/api/v1")
 
 
 def create_app(config_class=None) -> Flask:
@@ -52,8 +52,8 @@ def create_app(config_class=None) -> Flask:
 
     app.config.from_object(config_obj)
 
-    # 可选：让 Vault.config 再读取“动态值型”变量（不想写入类里）
-    # Vault.config['SOME_RUNTIME_FLAG'] = os.getenv('SOME_RUNTIME_FLAG', 'off')
+    # 可选：让 vault.config 再读取“动态值型”变量（不想写入类里）
+    # vault.config['SOME_RUNTIME_FLAG'] = os.getenv('SOME_RUNTIME_FLAG', 'off')
 
     @app.get("/health")
     def healthz():

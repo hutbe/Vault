@@ -1,5 +1,19 @@
 
 services:
+  app:
+    build: ./vault
+    container_name: vault-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - mariadb
+      - nginx
+    volumes:
+      - .:/src
+
   mariadb:
     image: mariadb:latest
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never
@@ -25,16 +39,42 @@ services:
       - ./mariadb/config:/etc/mysql/conf.d
       - ./mariadb/initdb:/docker-entrypoint-initdb.d
     networks:
-      - mariadb-network
+      - src-network
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --max_connections=1000
 
+  # Nginx代理服务器
+  nginx:
+    build: ./nginx
+    container_name: nginx-server
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+        - ./nginx/.env
+    volumes:
+      - ./nginx/static:/usr/share/nginx/html/static:ro # read-only（只读）
+      - ./nginx/certs:/etc/nginx/certs:ro # read-only（只读）
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - nginx-logs:/var/log/nginx	# 日志卷 - Docker 自动管理
+#    depends_on:
+#      - flask-src
+    networks:
+      - src-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost/nginx-health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
-  mariadb-network:
+  app-network:
     driver: bridge
 
+# Docker 自动管理 卷
 volumes:
-  mariadb-data:
+  nginx-logs:
     driver: local

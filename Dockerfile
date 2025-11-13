@@ -1,0 +1,34 @@
+python:3.13-slim
+
+# SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Prevent Python from writing .pyc files, buffer stdout/stderr, and pin common tooling paths
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/root/.local/bin:${PATH}" \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+WORKDIR /app
+
+# Install Python dependencies first to leverage Docker layer caching
+COPY requirements.txt ./
+RUN uv pip install --system -r requirements.txt
+
+# Install Playwright browser binaries (system deps already handled above)
+RUN python -m playwright install chromium
+
+# Copy .env
+COPY .env.example .env
+
+# Copy application source
+COPY . .
+
+# Ensure runtime directories exist even if ignored in build context
+RUN mkdir -p /ms-playwright logs final_reports insight_engine_streamlit_reports media_engine_streamlit_reports query_engine_streamlit_reports
+
+EXPOSE 5000 8501 8502 8503
+
+# Default command launches the Flask orchestrator which starts Streamlit agents
+CMD ["python", "app.py"]
+
