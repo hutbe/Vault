@@ -31,7 +31,9 @@ mariadb/data/
 mariadb/data/*
 
 # nginx 配置文件
-nginx/certs/
+nginx/certs/*.key
+nginx/certs/*.crt
+nginx/certs/*.pem
 nginx/log/
 
 # 临时文件和日志
