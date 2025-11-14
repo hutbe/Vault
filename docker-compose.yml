@@ -8,6 +8,8 @@ services:
       - "9090:9090"
     env_file:
       - .env
+    volumes:
+      - ${SHARED_DATA_PATH}:/app/shared_data:ro
     depends_on:
       - mariadb
       - nginx
@@ -53,12 +55,16 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "8000:8000"
+      - "8010:8010"
+      - "9000:9000"
     env_file:
         - ./nginx/.env
     volumes:
-      - ./nginx/static:/usr/share/nginx/html/static:ro # read-only（只读）
-      - ./nginx/certs:/etc/nginx/certs:ro # read-only（只读）
+      - ./nginx/www:/usr/share/nginx/www:ro # read-only（只读）
+      - ./nginx/certs:/etc/nginx/certs # read-only（只读）
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - ${SHARED_DATA_PATH}:/usr/share/nginx/shared_data:ro # read-only（只读）
       - nginx-logs:/var/log/nginx	# 日志卷 - Docker 自动管理
 #    depends_on:
 #      - flask-src

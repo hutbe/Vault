@@ -1,11 +1,21 @@
-upstream flask_app {
-    server ${BACKEND_HOST}:${BACKEND_PORT};
-}
-
 server {
-    listen ${NGINX_PORT};
-	listen [::]:${NGINX_PORT};
+    listen 443;
+	listen [::]:443;
     server_name ${NGINX_HOST};
+
+    # 证书路径（由脚本生成或挂载）
+    ssl_certificate     ${SSL_CERT_PATH};
+    ssl_certificate_key ${SSL_KEY_PATH};
+
+    # TLS 基础设置
+    ssl_session_timeout 1h;                 #缓存有效期
+    ssl_session_cache   shared:SSL:10m;
+    ssl_protocols       TLSv1.2 TLSv1.3;    #安全链接可选的加密协议
+    ssl_ciphers         HIGH:!aNULL:!MD5;   #加密算法
+    ssl_prefer_server_ciphers on;           #优先使用服务器端的加密算法
+
+    # 安全头片段
+    include /etc/nginx/snippets/security.conf;
 
     root ${WEB_ROOT};
 

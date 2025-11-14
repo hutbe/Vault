@@ -2,6 +2,14 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# 创建必要的目录
+# 相对于WORKDIR的相对路径,即/app/shared_data
+RUN mkdir -p shared_data/uploads/images
+
+# 声明挂载目录
+# 一定要使用绝对路径,VOLUME永远都是绝对路径
+VOLUME ["/app/shared_data"]
+
 # Install system dependencies
 # RUN apt-get update && apt-get install -y \
 #     gcc \
