@@ -3,8 +3,8 @@ upstream flask_app {
 }
 
 server {
-    listen ${NGINX_PORT};
-	listen [::]:${NGINX_PORT};
+    listen ${NGINX_PORT} http2;
+	listen [::]:${NGINX_PORT} http2;
     server_name ${NGINX_HOST};
 
     root ${WEB_ROOT};
