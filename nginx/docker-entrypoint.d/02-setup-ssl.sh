@@ -21,6 +21,6 @@ if [ "${SSL_ENABLED}" = "true" ]; then
     fi
 
     # 设置正确的权限
-    chmod 600 /etc/nginx/certs/server.key
-    chmod 644 /etc/nginx/certs/server.crt
+    chmod 600 ${SSL_KEY_PATH}
+    chmod 644 ${SSL_CERT_PATH}
 fi
