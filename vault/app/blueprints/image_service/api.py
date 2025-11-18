@@ -2,24 +2,23 @@ from flask import send_from_directory, current_app, Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 import os
 import uuid
-from PIL import Image as PILImage
-from vault.src.image_service.image_db import session, Image, ImageType
-from vault.src.image_service.image_db_helper import ImageDBHelper
 from sqlalchemy import func, or_
-from vault.src.image_service.image_db_utils import allowed_file, calculate_fileobject_md5
+from PIL import Image as PILImage
 
-from vault.src.utils.request_utils import get_value_from_request_params, get_value_from_request_params_without_error
-from vault.src.response.api_response import ApiResponse
-from vault.src.response.error_handlers import register_global_error_handlers
-
-from vault.src.response.exceptions import (
+from .image_db import session, Image, ImageType
+from .image_db_helper import ImageDBHelper
+from .image_db_utils import allowed_file, calculate_fileobject_md5
+from ...utils import get_value_from_request_params, get_value_from_request_params_without_error
+from ...response import (
+    ApiResponse,
+    register_global_error_handlers,
     ValidationException,
     ResourceNotFoundException,
-    BusinessRuleException
+    BusinessRuleException,
+    ErrorCodes
 )
-from vault.src.response.error_codes import ErrorCodes
 
-image_bp = Blueprint('images', __name__)
+image_bp = Blueprint('image', __name__, url_prefix='/image')
 
 # 全局错误处理，对所有blueprint都生效
 register_global_error_handlers(image_bp)
@@ -63,8 +62,8 @@ def upload_image():
         # 生成唯一文件名
         ext = os.path.splitext(secure_filename(file.filename))[1]
         uuid_filename = f"{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], folder_name, uuid_filename)
-        thumbnail_dir = current_app.config['UPLOAD_FOLDER']
+        filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], folder_name, uuid_filename)
+        thumbnail_dir = current_app.config['IMAGE_UPLOAD_FOLDER']
         # print(f'Generated UUID filepath: {filepath}')
         small_check_md5 = calculate_fileobject_md5(file, chunk_size=512 * 1024)
 
@@ -145,12 +144,12 @@ def upload_multiple_images():
             ImageType.type_name == type_name
         )
     ).first()
-    
+
     if not image_type:
         raise ResourceNotFoundException(resource_type="图片类型不存在", resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
 
     folder_name = f"{image_type.type_id}_{image_type.type_name}"
-    
+
     tags = get_value_from_request_params_without_error(request, 'tags') or None
     results = []
     for file in files:
@@ -167,8 +166,8 @@ def upload_multiple_images():
         try:
             ext = os.path.splitext(secure_filename(file.filename))[1]
             uuid_filename = f"{uuid.uuid4().hex}{ext}"
-            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], folder_name, uuid_filename)
-            thumbnail_dir = current_app.config['UPLOAD_FOLDER']
+            filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], folder_name, uuid_filename)
+            thumbnail_dir = current_app.config['IMAGE_UPLOAD_FOLDER']
             small_check_md5 = calculate_fileobject_md5(file, chunk_size=512 * 1024)
             duplicate_image = check_image_duplicate(small_check_md5)
             if duplicate_image:
@@ -266,16 +265,16 @@ def get_image(filepath):
     if image.image_type:
         folder_name = f"{image.image_type.type_id}_{image.image_type.type_name}"
     file_on_disk_name = os.path.join(folder_name, file_on_disk_name)
-    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], file_on_disk_name)
+    filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], file_on_disk_name)
     if not os.path.exists(filepath):
         raise ResourceNotFoundException(resource_type="File not found on disk", resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
 
-    return send_from_directory(current_app.config['UPLOAD_FOLDER'], file_on_disk_name)
+    return send_from_directory(current_app.config['IMAGE_UPLOAD_FOLDER'], file_on_disk_name)
 
 @image_bp.route('/thumbnails/<filename>', methods=['GET'])
 def get_thumbnail(filename):
     """获取缩略图"""
-    thumbnail_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'thumbnails')
+    thumbnail_dir = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], 'thumbnails')
     thumbnail_path = os.path.join(thumbnail_dir, filename)
 
     if not os.path.exists(thumbnail_path):
@@ -310,12 +309,12 @@ def download_image(image_id):
         is_deleted=False
     ).first()
 
-    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], image.uuid_filename)
+    filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], image.uuid_filename)
     if not os.path.exists(filepath):
         return jsonify({'error': 'File not found on disk'}), 404
 
     return send_from_directory(
-        current_app.config['UPLOAD_FOLDER'],
+        current_app.config['IMAGE_UPLOAD_FOLDER'],
         image.uuid_filename,
         as_attachment=True,
         download_name=image.original_filename
@@ -336,12 +335,12 @@ def delete_image(image_id):
         session.commit()
 
         # 如果需要物理删除文件，取消下面的注释
-        # filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], image.uuid_filename)
+        # filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], image.uuid_filename)
         # if os.path.exists(filepath):
         #     os.remove(filepath)
         #
         # thumbnail_path = os.path.join(
-        #     current_app.config['UPLOAD_FOLDER'],
+        #     current_app.config['IMAGE_UPLOAD_FOLDER'],
         #     'thumbnails',
         #     image.uuid_filename
         # )
@@ -531,7 +530,7 @@ def create_image_types():
         session.commit()
 
         # 创建相应的目录
-        directory = os.path.join(current_app.config['UPLOAD_FOLDER'], f"{new_type.type_id}_{new_type.type_name}")
+        directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{new_type.type_id}_{new_type.type_name}")
         os.makedirs(directory, exist_ok=True)
 
         return ApiResponse.success(data={
@@ -594,8 +593,8 @@ def update_image_type(type_id):
         raise BusinessRuleException(message="无法更新该图片类型，存在关联的图片，因安全的问题请联系管理员处理关联的图片-只支持修改type_name及tags", error_code=ErrorCodes.BUSINESS_RULE_VIOLATION)
 
     # 删除原有目录并创建新目录
-    old_directory = os.path.join(current_app.config['UPLOAD_FOLDER'], f"{image_type.type_id}_{image_type.type_name}")
-    new_directory = os.path.join(current_app.config['UPLOAD_FOLDER'], f"{image_type.type_id}_{type_name}")
+    old_directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{image_type.type_id}_{image_type.type_name}")
+    new_directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{image_type.type_id}_{type_name}")
     try:
         if os.path.exists(old_directory):
             os.rename(old_directory, new_directory) # 重命名目录
@@ -641,7 +640,7 @@ def delete_image_type(type_id):
 
     try:
         # 删除图片对应的目录
-        directory = os.path.join(current_app.config['UPLOAD_FOLDER'], f"{image_type.type_id}_{image_type.type_name}")
+        directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{image_type.type_id}_{image_type.type_name}")
         if os.path.exists(directory):
             os.rmdir(directory)
         session.delete(image_type)

@@ -8,8 +8,8 @@ server {
     root ${WEB_ROOT};
 
     # 静态文件直接由 Nginx 提供
-    location /images/ {
-        alias /usr/share/nginx/shared_data/uploads/images/;  # 修改为实际路径
+    location /image/ {
+        alias /usr/share/nginx/shared_data/uploads/image/;  # 修改为实际路径
         expires 30d;
         add_header Cache-Control "public, immutable";
         add_header Access-Control-Allow-Origin *;
@@ -43,7 +43,7 @@ server {
 
     # 重定向 /images 到 /images/
     location = /images {
-        return 301 /images/;
+        return 301 /image/;
     }
 
     # 健康检查

@@ -6,13 +6,13 @@
 
 
 import unittest
-from models.image_db import session, Image, Base, engine, ImageType
+from .image_db import session, Image, Base, engine, ImageType
 import os
 from werkzeug.utils import secure_filename
 import uuid
 import hashlib
 
-from models.image_db_helper import ImageDBHelper
+from .image_db_helper import ImageDBHelper
 
 
 def get_image(filename):
@@ -117,5 +117,5 @@ if __name__ == "__main__":
     #         print(type_id_type_name)
     #
     #         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    #         UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
-    #         filepath = os.path.join(UPLOAD_FOLDER, type_id_type_name, img.uuid_filename)
+    #         IMAGE_UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+    #         filepath = os.path.join(IMAGE_UPLOAD_FOLDER, type_id_type_name, img.uuid_filename)

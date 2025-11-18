@@ -9,8 +9,6 @@ from loguru import logger
 def register_global_error_handlers(app):
     """注册全局错误处理器"""
 
-    print("Registering global error handlers")
-
     @app.errorhandler(APIException)
     def handle_api_exception(e):
         """处理自定义API异常"""

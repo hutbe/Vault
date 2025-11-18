@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean
@@ -6,16 +7,31 @@ from sqlalchemy import inspect, func, text
 from sqlalchemy.pool import StaticPool
 
 # 创建数据库引擎
-database_url = "sqlite:///./models/images.db"
-# engine = create_engine(database_url, echo=True)
+def create_engine_from_env():
+    # 从环境变量读取配置
+    db_config = {
+        'username': os.getenv('DB_USER', 'root'),
+        'password': os.getenv('DB_PASSWORD', ''),
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'port': os.getenv('DB_PORT', '3306'),
+        'database': os.getenv('DB_DATABASE', 'test_db')
+    }
 
-# 多线程和多连接支持
-engine = create_engine(
-    database_url,
-    echo=True,
-    connect_args={'check_same_thread': False},
-    poolclass=StaticPool
-)
+    # 构建连接字符串
+    connection_string = (
+        f"mysql+pymysql://{db_config['username']}:{db_config['password']}"
+        f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
+    )
+
+    # 多线程和多连接支持
+    return create_engine(
+                connection_string,
+                echo=True,
+                poolclass=StaticPool
+            )
+
+# 创建数据库引擎
+engine = create_engine_from_env()
 
 # 创建Session
 Session = sessionmaker(bind=engine)

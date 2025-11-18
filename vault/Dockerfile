@@ -33,4 +33,4 @@ USER app
 EXPOSE 9090
 
 # Run gunicorn
-CMD ["gunicorn", "--config", "gunicorn.config.py", "app:app"]
+CMD ["gunicorn", "--config", "gunicorn.config.py", "wsgi:app"]

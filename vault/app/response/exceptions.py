@@ -24,7 +24,6 @@ class ValidationException(APIException):
             http_code=400
         )
 
-
 class AuthenticationException(APIException):
     """认证异常"""
 

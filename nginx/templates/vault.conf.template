@@ -32,7 +32,7 @@ server {
     }
 
     # 健康检查端点（可选）
-    location /nginx-health {
+    location /health-nginx {
         access_log off;
         return 200 "healthy\n";
         add_header Content-Type text/plain;

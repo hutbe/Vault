@@ -31,10 +31,10 @@ services:
       # 1. environment 中直接定义的变量
       # 2. env_file 中加载的变量
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-admin} # 如果变量不存在，使用默认值
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-mydb}
-      MYSQL_USER: ${MYSQL_USER:-admin}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-admin}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-admin} # 如果变量不存在，使用默认值
+      DB_DATABASE: ${DB_DATABASE:-mydb}
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-admin}
       TZ: Asia/Shanghai
     volumes:
       - ./mariadb/data:/var/lib/mysql
@@ -67,7 +67,7 @@ services:
       - ${SHARED_DATA_PATH}:/usr/share/nginx/shared_data:ro # read-only（只读）
       - nginx-logs:/var/log/nginx	# 日志卷 - Docker 自动管理
 #    depends_on:
-#      - flask-src
+#      - flask-app
     networks:
       - app-network
     healthcheck:

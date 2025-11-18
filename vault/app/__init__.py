@@ -3,6 +3,10 @@ from importlib import import_module
 from pathlib import Path
 from flask import Flask
 from dotenv import load_dotenv
+from loguru import logger
+
+from .blueprints import register_blueprints
+from .response import register_global_error_handlers
 
 def load_env():
     """
@@ -21,25 +25,23 @@ def load_env():
     # 3) 个人本地覆盖（不要提交到版本库）
     # load_dotenv(base_dir / ".env.local", override=True)
 
-
 def _resolve_config(config_path: str):
     module_path, class_name = config_path.rsplit(".", 1)
     module = import_module(module_path)
     return getattr(module, class_name)
 
 
-# def register_blueprints(src: Flask):
-#     from .blueprints.main import bp as main_bp
-#     src.register_blueprint(main_bp)
+# def register_blueprints(flask_app: Flask):
+#     from .blueprints.image_service.api import image_bp
+#     flask_app.register_blueprint(image_bp)
 #
-#     from .blueprints.api import bp as api_bp
-#     src.register_blueprint(api_bp, url_prefix="/api/v1")
-
+#     from .blueprints.api import api_bp
+#     flask_app.register_blueprint(api_bp, url_prefix="/api/v1")
 
 def create_app(config_class=None) -> Flask:
     load_env()
 
-    app = Flask(__name__)
+    flask_app = Flask(__name__)
 
     # 允许两种方式：
     # 1) 直接传 config_class
@@ -50,16 +52,21 @@ def create_app(config_class=None) -> Flask:
     else:
         config_obj = config_class
 
-    app.config.from_object(config_obj)
+    flask_app.config.from_object(config_obj)
 
     # 可选：让 vault.config 再读取“动态值型”变量（不想写入类里）
     # vault.config['SOME_RUNTIME_FLAG'] = os.getenv('SOME_RUNTIME_FLAG', 'off')
 
-    @app.get("/health")
-    def healthz():
-        return {"status": "ok", "env": app.config.get("ENV")}, 200
+    # 全局错误处理，对所有blueprint都生效
+    register_global_error_handlers(flask_app)
 
-    return app
+    register_blueprints(flask_app)
+
+    @flask_app.get("/health")
+    def healthz():
+        return {"status": "ok", "env": flask_app.config.get("ENV")}, 200
+
+    return flask_app
 
 if __name__ == '__main__':
     app = create_app(config_class="config.DevelopmentConfig")

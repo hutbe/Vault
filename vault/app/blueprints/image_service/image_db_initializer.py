@@ -6,9 +6,9 @@ import uuid
 import hashlib
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+IMAGE_UPLOAD_FOLDER = os.path.join(BASE_DIR, '../../../shared_data/uploads/image')
 # 图片服务配置
-IMAGE_URL_PREFIX = '/images'
+IMAGE_URL_PREFIX = '/image'
 THUMBNAIL_SIZE = (300, 300)
 
 def check_image_duplicate(image_md5):
@@ -61,7 +61,7 @@ def add_image_types():
     # 生成应的目录
     for img_type in IMAGE_TYPES:
         session.add(img_type)
-        directory = os.path.join(UPLOAD_FOLDER, f"{img_type.type_id}_{img_type.type_name}")
+        directory = os.path.join(IMAGE_UPLOAD_FOLDER, f"{img_type.type_id}_{img_type.type_name}")
         os.makedirs(directory, exist_ok=True)
     session.commit()
 
@@ -147,7 +147,7 @@ def import_image(image_type_id, filename, origin_filepath):
         ext = os.path.splitext(secure_filename(filename))[1]
         uuid_filename = f"{uuid.uuid4().hex}{ext}"
         image_folder = f"{image_type_id}_{image_type_name}"
-        filepath = os.path.join(UPLOAD_FOLDER, image_folder, uuid_filename)
+        filepath = os.path.join(IMAGE_UPLOAD_FOLDER, image_folder, uuid_filename)
         # 保存原图
         move_file_os(origin_filepath, filepath)
 
@@ -164,7 +164,7 @@ def import_image(image_type_id, filename, origin_filepath):
 
         # 创建缩略图
         try:
-            create_thumbnail(filepath, UPLOAD_FOLDER, THUMBNAIL_SIZE)
+            create_thumbnail(filepath, IMAGE_UPLOAD_FOLDER, THUMBNAIL_SIZE)
         except Exception as e:
             print(f"Failed to create thumbnail: {e}")
 
