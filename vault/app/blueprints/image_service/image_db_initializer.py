@@ -1,34 +1,13 @@
 from PIL import Image as PILImage
-from image_db import session, Image, Base, engine, ImageType
 import os, shutil
 from werkzeug.utils import secure_filename
 import uuid
-import hashlib
+from flask import current_app
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-IMAGE_UPLOAD_FOLDER = os.path.join(BASE_DIR, '../../../shared_data/uploads/image')
-# 图片服务配置
-IMAGE_URL_PREFIX = '/image'
-THUMBNAIL_SIZE = (300, 300)
+from .image_db import session, Image, Base, engine, ImageType
 
-def check_image_duplicate(image_md5):
-    """检查文件是否重复"""
-    existing_image = session.query(Image).filter_by(md5_hash=image_md5).first()
-    return existing_image or None
-
-def calculate_partial_md5_flexible(file_path, bytes_to_read=512 * 1024):
-    """计算文件前指定字节数的 MD5"""
-    hash_md5 = hashlib.md5()
-
-    with open(file_path, "rb") as f:
-        # 读取指定字节数
-        data = f.read(bytes_to_read)
-        hash_md5.update(data)
-
-    return hash_md5.hexdigest()
-
-# 不同大小的测试
-# small_check = calculate_partial_md5_flexible("image.jpg", 512 * 1024)  # 前64KB
+from .image_db_helper import ImageDBHelper
+from .image_db_utils import allowed_file, calculate_fileobject_md5, calculate_partial_md5_flexible
 
 def init_db():
     # 创建所有表
@@ -61,38 +40,9 @@ def add_image_types():
     # 生成应的目录
     for img_type in IMAGE_TYPES:
         session.add(img_type)
-        directory = os.path.join(IMAGE_UPLOAD_FOLDER, f"{img_type.type_id}_{img_type.type_name}")
+        directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{img_type.type_id}_{img_type.type_name}")
         os.makedirs(directory, exist_ok=True)
     session.commit()
-
-def create_thumbnail(image_path, thumbnail_dir, size=(300, 300)):
-    """创建缩略图在本目录"""
-    # 创建缩略图目录
-    """
-    thumbnail_dir = os.path.join(os.path.dirname(image_path), 'thumbnails')
-    os.makedirs(thumbnail_dir, exist_ok=True)
-
-    # 生成缩略图路径
-    filename = os.path.basename(image_path)
-    thumbnail_path = os.path.join(thumbnail_dir, filename)
-    """
-
-    """创建缩略图在目标目录"""
-    thumbnail_dir = os.path.join(thumbnail_dir, 'thumbnails')
-    os.makedirs(thumbnail_dir, exist_ok=True)
-    filename = os.path.basename(image_path)
-    thumbnail_path = os.path.join(thumbnail_dir, filename)
-
-    # 创建缩略图
-    with PILImage.open(image_path) as img:
-        img.thumbnail(size, PILImage.Resampling.LANCZOS)
-        try:
-            img.save(thumbnail_path, optimize=True, quality=85)
-            print(f"创建缩略图成功: {thumbnail_path}")
-        except Exception as e:
-            print(f"创建缩略图时出错: {e}")
-            return False
-    return thumbnail_path
 
 def move_file_os(source_path, destination_path):
     """使用os.rename移动文件"""
@@ -147,7 +97,9 @@ def import_image(image_type_id, filename, origin_filepath):
         ext = os.path.splitext(secure_filename(filename))[1]
         uuid_filename = f"{uuid.uuid4().hex}{ext}"
         image_folder = f"{image_type_id}_{image_type_name}"
-        filepath = os.path.join(IMAGE_UPLOAD_FOLDER, image_folder, uuid_filename)
+        # filepath = os.path.join(IMAGE_UPLOAD_FOLDER, image_folder, uuid_filename)
+        filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], image_folder, uuid_filename)
+        thumbnail_dir = current_app.config['IMAGE_UPLOAD_FOLDER']
         # 保存原图
         move_file_os(origin_filepath, filepath)
 
@@ -164,7 +116,7 @@ def import_image(image_type_id, filename, origin_filepath):
 
         # 创建缩略图
         try:
-            create_thumbnail(filepath, IMAGE_UPLOAD_FOLDER, THUMBNAIL_SIZE)
+            ImageDBHelper.create_thumbnail(filepath, thumbnail_dir, current_app.config['THUMBNAIL_SIZE'])
         except Exception as e:
             print(f"Failed to create thumbnail: {e}")
 

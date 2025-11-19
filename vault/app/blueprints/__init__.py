@@ -6,7 +6,6 @@ from importlib import import_module
 from pkgutil import iter_modules
 import sys
 
-
 def register_blueprints(app):
     """
     自动扫描 app.blueprints 包下的子模块/子包，尝试导入 `{package}.{name}.api`

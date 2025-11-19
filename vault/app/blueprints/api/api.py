@@ -12,5 +12,5 @@ from ...response import (
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 @api_bp.route('/health', methods=['GET'])
-def api_test():
+def api_health():
     return ApiResponse.success(message="You got me, I'm api, and I'm health")

@@ -9,6 +9,10 @@ def env_bool(name: str, default: bool = False):
 
 
 class BaseConfig:
+    # logger.info("所有环境变量名:")
+    # for key, value in os.environ.items():
+    #     logger.info(f"{key}={value}")
+
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-key")
     JSON_SORT_KEYS = False
     # 数据库 / 其他外部服务（默认 None 或开发兜底）
@@ -18,9 +22,9 @@ class BaseConfig:
     # 数据库配置
     DB_USER = os.getenv("DB_USER", "root")  # 生产必须提供
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
     DB_PORT = os.getenv("DB_PORT", 3306)
-    DB_DATABASE = os.getenv("DB_DATABASE", "my_db")
+    DB_DATABASE = os.getenv("DB_DATABASE", "vault_db")
 
     DATABASE_URL = (
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}"

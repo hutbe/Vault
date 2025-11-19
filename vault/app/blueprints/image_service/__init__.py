@@ -1,3 +1,3 @@
-from .api import image_bp as imagesg
+from .api import image_bp as bp
 
-__all__ = ["imagesg"]
+__all__ = ["bp"]

@@ -12,5 +12,5 @@ from ...response import (
 clock_bp = Blueprint('smart_clock', __name__, url_prefix='/smart-clock')
 
 @clock_bp.route('/health', methods=['GET'])
-def api_test():
+def api_health():
     return ApiResponse.success(message="You got me, I'm Clock, And I'm health")

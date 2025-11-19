@@ -18,6 +18,8 @@ from ...response import (
     ErrorCodes
 )
 
+from .image_db_initializer import init_db, add_image_types
+
 image_bp = Blueprint('image', __name__, url_prefix='/image')
 
 # 全局错误处理，对所有blueprint都生效
@@ -27,6 +29,17 @@ def check_image_duplicate(image_md5):
     """检查文件是否重复"""
     existing_image = session.query(Image).filter_by(md5_hash=image_md5).first()
     return existing_image or None
+
+@image_bp.route('/health', methods=['GET'])
+def api_health():
+    return ApiResponse.success(message="You got me, I'm Image Server, And I'm health")
+
+@image_bp.route('/init_image_db', methods=['POST'])
+def initialized_image_db():
+    init_db()
+    add_image_types()
+    return ApiResponse.success("All Done!")
+
 
 # 单个图片上传接口
 @image_bp.route('/upload', methods=['POST'])

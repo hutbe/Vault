@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey,
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from sqlalchemy import inspect, func, text
 from sqlalchemy.pool import StaticPool
+from loguru import logger
 
 # 创建数据库引擎
 def create_engine_from_env():
@@ -12,7 +13,7 @@ def create_engine_from_env():
     db_config = {
         'username': os.getenv('DB_USER', 'root'),
         'password': os.getenv('DB_PASSWORD', ''),
-        'host': os.getenv('DB_HOST', 'localhost'),
+        'host': os.getenv('DB_HOST', '127.0.0.1'),
         'port': os.getenv('DB_PORT', '3306'),
         'database': os.getenv('DB_DATABASE', 'test_db')
     }
