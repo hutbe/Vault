@@ -9,7 +9,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ${SHARED_DATA_PATH}:/app/shared_data:ro
+      - ${SHARED_DATA_PATH}:/app/shared_data
     depends_on:
       - mariadb
       - nginx
