@@ -4,14 +4,14 @@ from werkzeug.utils import secure_filename
 import uuid
 from flask import current_app
 
-from .image_db import session, Image, Base, engine, ImageType
+from .image_db import db_manager, Image, Base, ImageType
 
 from .image_db_helper import ImageDBHelper
 from .image_db_utils import allowed_file, calculate_fileobject_md5, calculate_partial_md5_flexible
 
 def init_db():
     # 创建所有表
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(db_manager.engine)
 
     # 或者删除所有表重新创建
     # Base.metadata.drop_all(engine)
@@ -38,11 +38,12 @@ IMAGE_TYPES = [
 
 def add_image_types():
     # 生成应的目录
-    for img_type in IMAGE_TYPES:
-        session.add(img_type)
-        directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{img_type.type_id}_{img_type.type_name}")
-        os.makedirs(directory, exist_ok=True)
-    session.commit()
+    with db_manager.session_scope() as session:
+        for img_type in IMAGE_TYPES:
+            session.add(img_type)
+            directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{img_type.type_id}_{img_type.type_name}")
+            os.makedirs(directory, exist_ok=True)
+        session.commit()
 
 def move_file_os(source_path, destination_path):
     """使用os.rename移动文件"""
@@ -136,8 +137,9 @@ def import_image(image_type_id, filename, origin_filepath):
             tags='movie_douban'  # 可选标签
         )
 
-        session.add(image)
-        session.commit()
+        with db_manager.session_scope() as session:
+            session.add(image)
+            session.commit()
 
         # print(f"处理图片成功 原始名称: {origin_filename} UUID名称: {uuid_filename} 文件大小: {file_size} 宽度: {width} 高度: {height}")
 

@@ -1,11 +1,75 @@
 import os
 from datetime import datetime
+from functools import wraps
 
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean
-from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from sqlalchemy.orm import sessionmaker, scoped_session, relationship, declarative_base
 from sqlalchemy import inspect, func, text
-from sqlalchemy.pool import StaticPool
-from loguru import logger
+from sqlalchemy.pool import QueuePool
+from contextlib import contextmanager
+
+class DatabaseManager:
+    def __init__(self, connection_url):
+        self.engine = create_engine(
+            connection_url,
+            # 连接池配置
+            poolclass=QueuePool,
+            pool_size=20,
+            max_overflow=30,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+
+            # 性能配置
+            echo_pool=True,  # 生产环境设为 False
+            echo=True,  # 生产环境设为 False
+
+            # 连接参数
+            connect_args={
+                'connect_timeout': 10,
+                'read_timeout': 60,
+                'write_timeout': 60,
+                'charset': 'utf8mb4'
+            }
+        )
+
+        # 线程安全的会话
+        self.session_factory = sessionmaker(
+            bind=self.engine,
+            autocommit=False,
+            autoflush=False,
+            expire_on_commit=False
+        )
+        self.ScopedSession = scoped_session(self.session_factory)
+
+
+    @contextmanager
+    def session_scope(self):
+        """提供事务范围的会话上下文"""
+        session = self.ScopedSession()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            self.ScopedSession.remove()
+
+    def get_connection_stats(self):
+        """获取连接池详细状态"""
+        pool = self.engine.pool
+
+        status = {
+            "pool_class": type(pool).__name__,
+            "pool_size": pool.size(),  # 连接池配置大小
+            "checked_out": pool.checkedout(),  # 已签出的连接数
+            "available": pool.size() - pool.checkedout(),  # 可用连接数
+            "overflow": pool.overflow(),  # 当前溢出连接数
+            "max_overflow": pool._max_overflow,  # 最大溢出数
+            "total_connections": pool.size() + pool.overflow(),  # 总连接数
+        }
+
+        return status
 
 # 创建数据库引擎
 def create_engine_from_env():
@@ -13,7 +77,7 @@ def create_engine_from_env():
     db_config = {
         'username': os.getenv('DB_USER', 'root'),
         'password': os.getenv('DB_PASSWORD', ''),
-        'host': os.getenv('DB_HOST', '127.0.0.1'),
+        'host': os.getenv('DB_HOST', 'localhost'),
         'port': os.getenv('DB_PORT', '3306'),
         'database': os.getenv('DB_DATABASE', 'test_db')
     }
@@ -24,19 +88,23 @@ def create_engine_from_env():
         f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
     )
 
-    # 多线程和多连接支持
-    return create_engine(
-                connection_string,
-                echo=True,
-                poolclass=StaticPool
-            )
+    return DatabaseManager(connection_string)
 
-# 创建数据库引擎
-engine = create_engine_from_env()
+db_manager = create_engine_from_env()
 
-# 创建Session
-Session = sessionmaker(bind=engine)
-session = Session()
+def get_db():
+    """依赖项：为每个请求提供数据库会话"""
+    with db_manager.session_scope() as session:
+        yield session
+
+def with_session(function):
+    """自动管理数据库会话的装饰器"""
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        with db_manager.session_scope() as session:
+            # 将会话作为第一个参数注入
+            return function(session, *args, **kwargs)
+    return wrapper
 
 # 创建基础模型类
 Base = declarative_base()
@@ -99,7 +167,9 @@ class Image(Base):
     # 定义双向关系时使用下面的代码
     # image_type = relationship("ImageTypes", back_populates="images")
     # 只定义单向关系
-    image_type = relationship("ImageType")
+    # image_type = relationship("ImageType")
+    # 方式1: 使用 lazy='joined' 总是预加载
+    image_type = relationship('ImageType', lazy='joined')
 
     def __repr__(self):
         return f'<Image {self.uuid_filename}>'
@@ -142,39 +212,40 @@ class Image(Base):
     def get_database_status(cls):
         """获取数据库状态信息"""
         try:
-            # 基础统计
-            total_count = session.query(func.count(cls.id)).scalar() or 0
-            active_count = session.query(func.count(cls.id)).filter_by(is_deleted=False).scalar() or 0
-            deleted_count = session.query(func.count(cls.id)).filter_by(is_deleted=True).scalar() or 0
+            with db_manager.session_scope() as session:
+                # 基础统计
+                total_count = session.query(func.count(cls.id)).scalar() or 0
+                active_count = session.query(func.count(cls.id)).filter_by(is_deleted=False).scalar() or 0
+                deleted_count = session.query(func.count(cls.id)).filter_by(is_deleted=True).scalar() or 0
 
-            # 存储统计
-            total_size = session.query(func.sum(cls.file_size)).filter_by(is_deleted=False).scalar() or 0
-            deleted_size = session.query(func.sum(cls.file_size)).filter_by(is_deleted=True).scalar() or 0
+                # 存储统计
+                total_size = session.query(func.sum(cls.file_size)).filter_by(is_deleted=False).scalar() or 0
+                deleted_size = session.query(func.sum(cls.file_size)).filter_by(is_deleted=True).scalar() or 0
 
-            # 文件类型统计
-            mime_stats = session.query(
-                cls.mime_type,
-                func.count(cls.id).label('count')
-            ).filter_by(is_deleted=False).group_by(cls.mime_type).all()
+                # 文件类型统计
+                mime_stats = session.query(
+                    cls.mime_type,
+                    func.count(cls.id).label('count')
+                ).filter_by(is_deleted=False).group_by(cls.mime_type).all()
 
-            # 最近上传
-            latest_upload = session.query(cls).filter_by(is_deleted=False).order_by(cls.upload_time.desc()).first()
-            oldest_upload = session.query(cls).filter_by(is_deleted=False).order_by(cls.upload_time.asc()).first()
+                # 最近上传
+                latest_upload = session.query(cls).filter_by(is_deleted=False).order_by(cls.upload_time.desc()).first()
+                oldest_upload = session.query(cls).filter_by(is_deleted=False).order_by(cls.upload_time.asc()).first()
 
-            return {
-                'total_images': total_count,
-                'active_images': active_count,
-                'deleted_images': deleted_count,
-                'storage': {
-                    'total_size': total_size,
-                    'total_size_human': cls._format_size(total_size),
-                    'deleted_size': deleted_size,
-                    'deleted_size_human': cls._format_size(deleted_size)
-                },
-                'mime_types': {mime: count for mime, count in mime_stats},
-                'latest_upload': latest_upload.upload_time.isoformat() if latest_upload else None,
-                'oldest_upload': oldest_upload.upload_time.isoformat() if oldest_upload else None
-            }
+                return {
+                    'total_images': total_count,
+                    'active_images': active_count,
+                    'deleted_images': deleted_count,
+                    'storage': {
+                        'total_size': total_size,
+                        'total_size_human': cls._format_size(total_size),
+                        'deleted_size': deleted_size,
+                        'deleted_size_human': cls._format_size(deleted_size)
+                    },
+                    'mime_types': {mime: count for mime, count in mime_stats},
+                    'latest_upload': latest_upload.upload_time.isoformat() if latest_upload else None,
+                    'oldest_upload': oldest_upload.upload_time.isoformat() if oldest_upload else None
+                }
         except Exception as e:
             return {
                 'error': str(e),
@@ -185,7 +256,7 @@ class Image(Base):
     def get_table_info(cls):
         """获取表结构信息"""
         try:
-            inspector = inspect(engine)
+            inspector = inspect(db_manager.engine)
             columns = inspector.get_columns(cls.__tablename__)
             indexes = inspector.get_indexes(cls.__tablename__)
 

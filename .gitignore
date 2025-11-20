@@ -26,6 +26,9 @@ pytorch_python11/
 .spyderproject
 .spyproject
 
+# 资源文件
+shared_data/
+
 # MariaDB 数据目录
 mariadb/data/
 mariadb/data/*

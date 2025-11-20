@@ -6,7 +6,7 @@ from sqlalchemy import inspect, func, text
 
 import os
 
-from image_db import session, Image
+from image_db import db_manager
 
 
 def get_database_info(a_session):
@@ -81,14 +81,14 @@ print('--- Image Info ---')
 # ).first()
 
 # image = session.query(Image).filter(id=='5').one()
+with db_manager.session_scope() as session:
+    print('--- Database Status ---')
+    get_database_info(session)
 
-print('--- Database Status ---')
-get_database_info(session)
+    print('--- Table Info ---')
+    get_all_tables(session)
 
-print('--- Table Info ---')
-get_all_tables(session)
+    print('---SQLite Database Status ---')
+    get_sqlite_database_info(session)
 
-print('---SQLite Database Status ---')
-get_sqlite_database_info(session)
-
-# print(image.to_dict() if image else "Image not found")
+    # print(image.to_dict() if image else "Image not found")

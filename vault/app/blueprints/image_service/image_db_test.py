@@ -6,7 +6,7 @@
 
 
 import unittest
-from .image_db import session, Image, Base, engine, ImageType
+from .image_db import db_manager, Image
 import os
 from werkzeug.utils import secure_filename
 import uuid
@@ -19,17 +19,18 @@ def get_image(filename):
     """通过UUID文件名获取图片"""
     # 检查数据库中是否存在且未删除
     file_on_disk_name = filename
-    image = session.query(Image).filter_by(
-        uuid_filename=filename,
-        is_deleted=False
-    ).first()
-
-    if image is None:
-        # 尝试通过原始文件名查找-不推荐，可能有重复
+    with db_manager.session_scope() as session:
         image = session.query(Image).filter_by(
-            original_filename=filename,
+            uuid_filename=filename,
             is_deleted=False
         ).first()
+
+        if image is None:
+            # 尝试通过原始文件名查找-不推荐，可能有重复
+            image = session.query(Image).filter_by(
+                original_filename=filename,
+                is_deleted=False
+            ).first()
         file_on_disk_name = image.uuid_filename if image else None
 
     if not image:

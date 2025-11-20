@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy import func, or_
 from PIL import Image as PILImage
 
-from .image_db import session, Image, ImageType
+from .image_db import db_manager, Image, ImageType
 from .image_db_helper import ImageDBHelper
 from .image_db_utils import allowed_file, calculate_fileobject_md5
 from ...utils import get_value_from_request_params, get_value_from_request_params_without_error
@@ -27,8 +27,20 @@ register_global_error_handlers(image_bp)
 
 def check_image_duplicate(image_md5):
     """检查文件是否重复"""
-    existing_image = session.query(Image).filter_by(md5_hash=image_md5).first()
-    return existing_image or None
+    with db_manager.session_scope() as session:
+        existing_image = session.query(Image).filter_by(md5_hash=image_md5).first()
+        return existing_image or None
+
+# 查询image type对象
+def inquiry_image_type(type_id, type_name):
+    with db_manager.session_scope() as session:
+        image_type = session.query(ImageType).filter(
+            or_(
+                ImageType.type_id == type_id,
+                ImageType.type_name == type_name
+            )
+        ).first()
+    return image_type
 
 @image_bp.route('/health', methods=['GET'])
 def api_health():
@@ -57,12 +69,8 @@ def upload_image():
     type_name, error2 = get_value_from_request_params(request, 'type_name')
     if error1 and error2:
         raise ValidationException(message="type_id参数没有传", error_code=ErrorCodes.MISSING_PARAMETER)
-    image_type = session.query(ImageType).filter(
-        or_(
-            ImageType.type_id == type_id,
-            ImageType.type_name == type_name
-        )
-    ).first()
+
+    image_type = inquiry_image_type(type_id=type_id, type_name=type_name)
     if not image_type:
         raise ResourceNotFoundException(resource_type="图片类型不存在", resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
     folder_name = f"{image_type.type_id}_{image_type.type_name}"
@@ -71,68 +79,70 @@ def upload_image():
         raise ResourceNotFoundException(resource_type="不允许的文件类型", resource_id=ErrorCodes.INVALID_PARAMETER)
 
     filepath = None
+    # 生成唯一文件名
+    ext = os.path.splitext(secure_filename(file.filename))[1]
+    uuid_filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], folder_name, uuid_filename)
+    thumbnail_dir = current_app.config['IMAGE_UPLOAD_FOLDER']
+    # print(f'Generated UUID filepath: {filepath}')
+    small_check_md5 = calculate_fileobject_md5(file, chunk_size=512 * 1024)
+
+    # print(f'Calculated MD5 (first 64KB)- {file.filename} : {small_check_md5}')
+
+    # 检查重复
+    duplicate_image = check_image_duplicate(small_check_md5)
+    if duplicate_image:
+        return ApiResponse.success(message="Duplicate image found", data=duplicate_image.to_dict())
+
     try:
-        # 生成唯一文件名
-        ext = os.path.splitext(secure_filename(file.filename))[1]
-        uuid_filename = f"{uuid.uuid4().hex}{ext}"
-        filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], folder_name, uuid_filename)
-        thumbnail_dir = current_app.config['IMAGE_UPLOAD_FOLDER']
-        # print(f'Generated UUID filepath: {filepath}')
-        small_check_md5 = calculate_fileobject_md5(file, chunk_size=512 * 1024)
-
-        # print(f'Calculated MD5 (first 64KB)- {file.filename} : {small_check_md5}')
-
-        # 检查重复
-        duplicate_image = check_image_duplicate(small_check_md5)
-        if duplicate_image:
-            return ApiResponse.success(message="Duplicate image found", data=duplicate_image.to_dict())
-
         # 保存原图
         file.save(filepath)
-
-        # 获取图片信息
-        file_size = os.path.getsize(filepath)
-        # small_check_md5 = calculate_partial_md5_flexible(filepath, 512 * 1024)  # 前64KB
-        width, height = None, None
-
-        try:
-            with PILImage.open(filepath) as img:
-                width, height = img.size
-        except Exception as e:
-            current_app.logger.warning(f"Cannot get image dimensions: {e}")
-
-        # 创建缩略图
-        try:
-            ImageDBHelper.create_thumbnail(filepath, thumbnail_dir, current_app.config['THUMBNAIL_SIZE'])
-        except Exception as e:
-            current_app.logger.error(f"Failed to create thumbnail: {e}")
-
-        # 保存到数据库
-        image = Image(
-            type_id=type_id,
-            tags=tags,
-            uuid_filename=uuid_filename,
-            original_filename=file.filename,
-            file_size=file_size,
-            md5_hash=small_check_md5,
-            mime_type=file.content_type,
-            width=width,
-            height=height,
-            description=request.form.get('description')  # 可选描述
-        )
-
-        session.add(image)
-        session.commit()
-
-        return ApiResponse.success(data=image.to_dict(), message="Image uploaded successfully")
-
     except Exception as e:
-        session.rollback()
-        # 删除已上传的文件
-        if filepath and os.path.exists(filepath):
-            os.remove(filepath)
-        current_app.logger.error(f"Upload failed: {e}")
-        return jsonify({'error': 'Upload failed', 'message': str(e)}), 500
+        current_app.logger.warning(f"Cannot save file: {e}")
+
+    # 获取图片信息
+    file_size = os.path.getsize(filepath)
+    # small_check_md5 = calculate_partial_md5_flexible(filepath, 512 * 1024)  # 前64KB
+    width, height = None, None
+
+    try:
+        with PILImage.open(filepath) as img:
+            width, height = img.size
+    except Exception as e:
+        current_app.logger.warning(f"Cannot get image dimensions: {e}")
+
+    # 创建缩略图
+    try:
+        ImageDBHelper.create_thumbnail(filepath, thumbnail_dir, current_app.config['THUMBNAIL_SIZE'])
+    except Exception as e:
+        current_app.logger.error(f"Failed to create thumbnail: {e}")
+
+    # 保存到数据库
+    image = Image(
+        type_id=type_id,
+        tags=tags,
+        uuid_filename=uuid_filename,
+        original_filename=file.filename,
+        file_size=file_size,
+        md5_hash=small_check_md5,
+        mime_type=file.content_type,
+        width=width,
+        height=height,
+        description=request.form.get('description')  # 可选描述
+    )
+
+    with db_manager.session_scope() as session:
+        try:
+            session.add(image)
+            session.commit()
+            return ApiResponse.success(data=image.to_dict(), message="Image uploaded successfully")
+        except Exception as e:
+            session.rollback()
+            # 删除已上传的文件
+            if filepath and os.path.exists(filepath):
+                os.remove(filepath)
+            current_app.logger.error(f"Upload failed: {e}")
+            return jsonify({'error': 'Upload failed', 'message': str(e)}), 500
 
 # 多图片上传接口
 @image_bp.route('/multiple_upload', methods=['POST'])
@@ -151,12 +161,13 @@ def upload_multiple_images():
     type_name, error2 = get_value_from_request_params(request, 'type_name')
     if error1 and error2:
         raise ValidationException(message="type_id参数没有传", error_code=ErrorCodes.MISSING_PARAMETER)
-    image_type = session.query(ImageType).filter(
-        or_(
-            ImageType.type_id == type_id,
-            ImageType.type_name == type_name
-        )
-    ).first()
+    with db_manager.session_scope() as session:
+        image_type = session.query(ImageType).filter(
+            or_(
+                ImageType.type_id == type_id,
+                ImageType.type_name == type_name
+            )
+        ).first()
 
     if not image_type:
         raise ResourceNotFoundException(resource_type="图片类型不存在", resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
@@ -176,62 +187,68 @@ def upload_multiple_images():
             results.append({'filename': file.filename, 'error': f'File size exceeds {MAX_FILE_SIZE // (1024*1024)}MB'})
             continue
         filepath = None
-        try:
-            ext = os.path.splitext(secure_filename(file.filename))[1]
-            uuid_filename = f"{uuid.uuid4().hex}{ext}"
-            filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], folder_name, uuid_filename)
-            thumbnail_dir = current_app.config['IMAGE_UPLOAD_FOLDER']
-            small_check_md5 = calculate_fileobject_md5(file, chunk_size=512 * 1024)
-            duplicate_image = check_image_duplicate(small_check_md5)
-            if duplicate_image:
-                results.append({
-                    'filename': file.filename,
-                    'success': True,
-                    'message': 'Duplicate image found',
-                    'data': duplicate_image.to_dict()
-                })
-                continue
-            file.save(filepath)
-            # file_size 已在前面获取
-            width, height = None, None
-            try:
-                with PILImage.open(filepath) as img:
-                    width, height = img.size
-            except Exception as e:
-                current_app.logger.warning(f"Cannot get image dimensions: {e}")
-            try:
-                ImageDBHelper.create_thumbnail(filepath, thumbnail_dir, current_app.config['THUMBNAIL_SIZE'])
-            except Exception as e:
-                current_app.logger.error(f"Failed to create thumbnail: {e}")
-            image = Image(
-                type_id=type_id,
-                tags=tags,
-                uuid_filename=uuid_filename,
-                original_filename=file.filename,
-                file_size=file_size,
-                md5_hash=small_check_md5,
-                mime_type=file.content_type,
-                width=width,
-                height=height,
-                description=request.form.get('description')
-            )
-            session.add(image)
-            session.commit()
+
+        ext = os.path.splitext(secure_filename(file.filename))[1]
+        uuid_filename = f"{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], folder_name, uuid_filename)
+        thumbnail_dir = current_app.config['IMAGE_UPLOAD_FOLDER']
+        small_check_md5 = calculate_fileobject_md5(file, chunk_size=512 * 1024)
+        duplicate_image = check_image_duplicate(small_check_md5)
+        if duplicate_image:
             results.append({
                 'filename': file.filename,
                 'success': True,
-                'data': image.to_dict()
+                'message': 'Duplicate image found',
+                'data': duplicate_image.to_dict()
             })
+            continue
+        try:
+            # 保存原图
+            file.save(filepath)
         except Exception as e:
-            session.rollback()
-            if filepath and os.path.exists(filepath):
-                os.remove(filepath)
-            current_app.logger.error(f"Upload failed: {e}")
-            results.append({'filename': file.filename, 'error': 'Upload failed', 'message': str(e)})
+            current_app.logger.warning(f"Cannot save file: {e}")
+        # file_size 已在前面获取
+        width, height = None, None
+        try:
+            with PILImage.open(filepath) as img:
+                width, height = img.size
+        except Exception as e:
+            current_app.logger.warning(f"Cannot get image dimensions: {e}")
+        try:
+            ImageDBHelper.create_thumbnail(filepath, thumbnail_dir, current_app.config['THUMBNAIL_SIZE'])
+        except Exception as e:
+            current_app.logger.error(f"Failed to create thumbnail: {e}")
+        image = Image(
+            type_id=type_id,
+            tags=tags,
+            uuid_filename=uuid_filename,
+            original_filename=file.filename,
+            file_size=file_size,
+            md5_hash=small_check_md5,
+            mime_type=file.content_type,
+            width=width,
+            height=height,
+            description=request.form.get('description')
+        )
+        with db_manager.session_scope() as session:
+            try:
+                session.add(image)
+                session.commit()
+                results.append({
+                    'filename': file.filename,
+                    'success': True,
+                    'data': image.to_dict()
+                })
+            except Exception as e:
+                session.rollback()
+                if filepath and os.path.exists(filepath):
+                    os.remove(filepath)
+                current_app.logger.error(f"Upload failed: {e}")
+                results.append({'filename': file.filename, 'error': 'Upload failed', 'message': str(e)})
     return ApiResponse.success(data=results, message="Multiple image upload processed")
 
 @image_bp.route('/', methods=['GET'])
-def get_image_by_id():
+def get_image_list_by_id():
     # 分页获取图片列表
     type_id, error1 = get_value_from_request_params(request, 'type_id')
     type_name, error2 = get_value_from_request_params(request, 'type_name')
@@ -241,12 +258,13 @@ def get_image_by_id():
 
     if error1 and error2:
         raise ValidationException(message="type_id参数没有传", error_code=ErrorCodes.MISSING_PARAMETER)
-    image_type = session.query(ImageType).filter(
-        or_(
-            ImageType.type_id == type_id,
-            ImageType.type_name == type_name
-        )
-    ).first()
+    with db_manager.session_scope() as session:
+        image_type = session.query(ImageType).filter(
+            or_(
+                ImageType.type_id == type_id,
+                ImageType.type_name == type_name
+            )
+        ).first()
     result = ImageDBHelper.get_image_list(page=page, page_size=page_size, type_id=image_type.type_id,
                                           search_keyword=keywords)
     return ApiResponse.success(data=result)
@@ -258,18 +276,19 @@ def get_image(filepath):
     # 提取文件名
     filename = os.path.basename(filepath)
     file_on_disk_name = filename
-    image = session.query(Image).filter_by(
-        uuid_filename=filename,
-        is_deleted=False
-    ).first()
-
-    if image is None:
-        # 尝试通过原始文件名查找-不推荐，可能有重复
+    with db_manager.session_scope() as session:
         image = session.query(Image).filter_by(
-            original_filename=filename,
+            uuid_filename=filename,
             is_deleted=False
         ).first()
-        file_on_disk_name = image.uuid_filename if image else None
+
+        if image is None:
+            # 尝试通过原始文件名查找-不推荐，可能有重复
+            image = session.query(Image).filter_by(
+                original_filename=filename,
+                is_deleted=False
+            ).first()
+            file_on_disk_name = image.uuid_filename if image else None
 
     if not image:
         raise ResourceNotFoundException(resource_type="Image not found", resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
@@ -304,12 +323,13 @@ def get_images_for_typeid(req):
 
     if error1 and error2:
         raise ValidationException(message="type_id参数没有传", error_code=ErrorCodes.MISSING_PARAMETER)
-    image_type = session.query(ImageType).filter(
-        or_(
-            ImageType.type_id == type_id,
-            ImageType.type_name == type_name
-        )
-    ).first()
+    with db_manager.session_scope() as session:
+        image_type = session.query(ImageType).filter(
+            or_(
+                ImageType.type_id == type_id,
+                ImageType.type_name == type_name
+            )
+        ).first()
     result = ImageDBHelper.get_image_list(page=page, page_size=page_size, type_id=image_type.type_id, search_keyword=keywords)
     return result
 
@@ -317,10 +337,11 @@ def get_images_for_typeid(req):
 @image_bp.route('/download/<int:image_id>', methods=['GET'])
 def download_image(image_id):
     """下载图片，使用原始文件名"""
-    image = session.query(Image).filter_by(
-        id=image_id,
-        is_deleted=False
-    ).first()
+    with db_manager.session_scope() as session:
+        image = session.query(Image).filter_by(
+            id=image_id,
+            is_deleted=False
+        ).first()
 
     filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], image.uuid_filename)
     if not os.path.exists(filepath):
@@ -337,38 +358,39 @@ def download_image(image_id):
 @image_bp.route('/<int:image_id>', methods=['DELETE'])
 def delete_image(image_id):
     """软删除图片"""
-    image = session.query(Image).filter_by(
-        id=image_id,
-        is_deleted=False
-    ).first()
+    with db_manager.session_scope() as session:
+        image = session.query(Image).filter_by(
+            id=image_id,
+            is_deleted=False
+        ).first()
 
-    try:
-        # 软删除（推荐）
-        image.is_deleted = True
-        session.commit()
+        try:
+            # 软删除（推荐）
+            image.is_deleted = True
+            session.commit()
 
-        # 如果需要物理删除文件，取消下面的注释
-        # filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], image.uuid_filename)
-        # if os.path.exists(filepath):
-        #     os.remove(filepath)
-        #
-        # thumbnail_path = os.path.join(
-        #     current_app.config['IMAGE_UPLOAD_FOLDER'],
-        #     'thumbnails',
-        #     image.uuid_filename
-        # )
-        # if os.path.exists(thumbnail_path):
-        #     os.remove(thumbnail_path)
+            # 如果需要物理删除文件，取消下面的注释
+            # filepath = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], image.uuid_filename)
+            # if os.path.exists(filepath):
+            #     os.remove(filepath)
+            #
+            # thumbnail_path = os.path.join(
+            #     current_app.config['IMAGE_UPLOAD_FOLDER'],
+            #     'thumbnails',
+            #     image.uuid_filename
+            # )
+            # if os.path.exists(thumbnail_path):
+            #     os.remove(thumbnail_path)
 
-        return jsonify({
-            'success': True,
-            'message': 'Image deleted successfully'
-        }), 200
+            return jsonify({
+                'success': True,
+                'message': 'Image deleted successfully'
+            }), 200
 
-    except Exception as e:
-        session.rollback()
-        current_app.logger.error(f"Delete failed: {e}")
-        return jsonify({'error': 'Delete failed', 'message': str(e)}), 500
+        except Exception as e:
+            session.rollback()
+            current_app.logger.error(f"Delete failed: {e}")
+            return jsonify({'error': 'Delete failed', 'message': str(e)}), 500
 
 
 @image_bp.route('/list', methods=['GET'])
@@ -424,10 +446,11 @@ def list_images():
 @image_bp.route('/<int:image_id>/info', methods=['GET'])
 def get_image_info(image_id):
     """获取图片详细信息"""
-    image = session.query(Image).filter_by(
-        id=image_id,
-        is_deleted=False
-    ).first()
+    with db_manager.session_scope() as session:
+        image = session.query(Image).filter_by(
+            id=image_id,
+            is_deleted=False
+        ).first()
     return jsonify({
         'success': True,
         'data': image.to_dict()
@@ -437,25 +460,26 @@ def get_image_info(image_id):
 @image_bp.route('/<int:image_id>', methods=['PUT', 'PATCH'])
 def update_image_info(image_id):
     """更新图片信息（如描述）"""
-    image = session.query(Image).filter_by(
-        id=image_id,
-        is_deleted=False
-    ).first()
+    with db_manager.session_scope() as session:
+        image = session.query(Image).filter_by(
+            id=image_id,
+            is_deleted=False
+        ).first()
 
-    data = request.get_json()
+        data = request.get_json()
 
-    if 'description' in data:
-        image.description = data['description']
+        if 'description' in data:
+            image.description = data['description']
 
-    try:
-        session.commit()
-        return jsonify({
-            'success': True,
-            'data': image.to_dict()
-        }), 200
-    except Exception as e:
-        session.rollback()
-        return jsonify({'error': 'Update failed', 'message': str(e)}), 500
+        try:
+            session.commit()
+            return jsonify({
+                'success': True,
+                'data': image.to_dict()
+            }), 200
+        except Exception as e:
+            session.rollback()
+            return jsonify({'error': 'Update failed', 'message': str(e)}), 500
 
 
 @image_bp.route('/stats', methods=['GET'])
@@ -463,9 +487,10 @@ def get_stats():
     """获取图片服务统计信息"""
     try:
         total_images = Image.query.filter_by(is_deleted=False).count()
-        total_size = session.query(
-            func.sum(Image.file_size)
-        ).filter_by(is_deleted=False).scalar() or 0
+        with db_manager.session_scope() as session:
+            total_size = session.query(
+                func.sum(Image.file_size)
+            ).filter_by(is_deleted=False).scalar() or 0
 
         return jsonify({
             'success': True,
@@ -490,8 +515,8 @@ def get_image_types():
         raise ValidationException(message="获取AuthenticationCode失败", error_code=ErrorCodes.PERMISSION_DENIED)
     if auth_code != current_app.config.get('IMAGE_SERVICE_AUTH_CODE'):
         raise ValidationException(message="获取AuthenticationCode失败", error_code=ErrorCodes.PERMISSION_DENIED)
-
-    image_types = session.query(ImageType).all()
+    with db_manager.session_scope() as session:
+        image_types = session.query(ImageType).all()
     types_list = [{
         'type_id': img_type.type_id,
         'type_name': img_type.type_name,
@@ -525,11 +550,12 @@ def create_image_types():
 
     description = get_value_from_request_params_without_error(request, 'description')
 
-    existing_type = session.query(ImageType).filter(
-        or_(
-            ImageType.type_id == type_id
-        )
-    ).first()
+    with db_manager.session_scope() as session:
+        existing_type = session.query(ImageType).filter(
+            or_(
+                ImageType.type_id == type_id
+            )
+        ).first()
     if existing_type:
         return jsonify({'error': 'Image type with same ID or name already exists'}), 400
 
@@ -559,7 +585,8 @@ def create_image_types():
 
 @image_bp.route('/types/<int:type_id>', methods=['GET'])
 def get_image_types_with_id(type_id):
-    image_type = session.query(ImageType).filter_by(type_id=type_id).first()
+    with db_manager.session_scope() as session:
+        image_type = session.query(ImageType).filter_by(type_id=type_id).first()
     if not image_type:
         msg = f"图片类型 type_id: {type_id} 不存在"
         raise ResourceNotFoundException(resource_type=msg, resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
@@ -596,12 +623,13 @@ def update_image_type(type_id):
     if error2:
         raise ValidationException(message="没有传type_name参数，只支持修改type_name及tags", error_code=ErrorCodes.MISSING_PARAMETER)
 
-    image_type = session.query(ImageType).filter_by(type_id=type_id).first()
-    if not image_type:
-        msg = f"图片类型 type_id: {type_id} 不存在 只支持修改type_name及tags"
-        raise ResourceNotFoundException(resource_type=msg, resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
+    with db_manager.session_scope() as session:
+        image_type = session.query(ImageType).filter_by(type_id=type_id).first()
+        if not image_type:
+            msg = f"图片类型 type_id: {type_id} 不存在 只支持修改type_name及tags"
+            raise ResourceNotFoundException(resource_type=msg, resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
 
-    related_images_count = session.query(Image).filter(Image.type_id == image_type.type_id).count()
+        related_images_count = session.query(Image).filter(Image.type_id == image_type.type_id).count()
     if related_images_count > 0:
         raise BusinessRuleException(message="无法更新该图片类型，存在关联的图片，因安全的问题请联系管理员处理关联的图片-只支持修改type_name及tags", error_code=ErrorCodes.BUSINESS_RULE_VIOLATION)
 
@@ -642,25 +670,26 @@ def delete_image_type(type_id):
     if auth_code != current_app.config.get('IMAGE_SERVICE_AUTH_CODE'):
         raise ValidationException(message="获取AuthenticationCode失败", error_code=ErrorCodes.PERMISSION_DENIED)
 
-    image_type = session.query(ImageType).filter_by(type_id=type_id).first()
-    if not image_type:
-        msg = f"图片类型 type_id: {type_id} 不存在"
-        raise ResourceNotFoundException(resource_type=msg, resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
+    with db_manager.session_scope() as session:
+        image_type = session.query(ImageType).filter_by(type_id=type_id).first()
+        if not image_type:
+            msg = f"图片类型 type_id: {type_id} 不存在"
+            raise ResourceNotFoundException(resource_type=msg, resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
 
-    related_images_count = session.query(Image).filter(Image.type_id == image_type.type_id).count()
-    if related_images_count > 0:
-        raise BusinessRuleException(message="无法删除该图片类型，存在关联的图片", error_code=ErrorCodes.BUSINESS_RULE_VIOLATION)
+        related_images_count = session.query(Image).filter(Image.type_id == image_type.type_id).count()
+        if related_images_count > 0:
+            raise BusinessRuleException(message="无法删除该图片类型，存在关联的图片", error_code=ErrorCodes.BUSINESS_RULE_VIOLATION)
 
-    try:
-        # 删除图片对应的目录
-        directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{image_type.type_id}_{image_type.type_name}")
-        if os.path.exists(directory):
-            os.rmdir(directory)
-        session.delete(image_type)
-        session.commit()
-        return  ApiResponse.success(message="图片类型删除成功")
-    except Exception as e:
-        session.rollback()
-        return ApiResponse.error(message=f"图片类型删除失败: {e}")
+        try:
+            # 删除图片对应的目录
+            directory = os.path.join(current_app.config['IMAGE_UPLOAD_FOLDER'], f"{image_type.type_id}_{image_type.type_name}")
+            if os.path.exists(directory):
+                os.rmdir(directory)
+            session.delete(image_type)
+            session.commit()
+            return  ApiResponse.success(message="图片类型删除成功")
+        except Exception as e:
+            session.rollback()
+            return ApiResponse.error(message=f"图片类型删除失败: {e}")
 
 

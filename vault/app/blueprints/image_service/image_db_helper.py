@@ -1,5 +1,5 @@
 from PIL import Image as PILImage
-from .image_db import session, Image, Base, engine, ImageType
+from .image_db import db_manager, Image
 from sqlalchemy.orm import joinedload
 import os
 
@@ -9,8 +9,9 @@ class ImageDBHelper:
     @staticmethod
     def check_image_duplicate(image_md5):
         """检查文件是否重复"""
-        existing_image = session.query(Image).filter_by(md5_hash=image_md5).first()
-        return existing_image or None
+        with db_manager.session_scope() as session:
+            existing_image = session.query(Image).filter_by(md5_hash=image_md5).first()
+            return existing_image or None
 
     # 录创建缩略图-指定目标目
     @staticmethod
@@ -74,9 +75,10 @@ class ImageDBHelper:
 
         """获取图片列表（带分页和过滤）"""
         # 构建查询
-        query = session.query(Image) \
-            .options(joinedload(Image.image_type)) \
-            .order_by(Image.id.desc())
+        with db_manager.session_scope() as session:
+            query = session.query(Image) \
+                .options(joinedload(Image.image_type)) \
+                .order_by(Image.id.desc())
 
         # 添加过滤条件
         if type_id:
