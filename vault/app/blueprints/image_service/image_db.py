@@ -8,6 +8,8 @@ from sqlalchemy import inspect, func, text
 from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
 
+from loguru import logger
+
 class DatabaseManager:
     def __init__(self, connection_url):
         self.engine = create_engine(
@@ -79,14 +81,15 @@ def create_engine_from_env():
         'password': os.getenv('DB_PASSWORD', ''),
         'host': os.getenv('DB_HOST', 'localhost'),
         'port': os.getenv('DB_PORT', '3306'),
-        'database': os.getenv('DB_DATABASE', 'test_db')
+        'database': os.getenv('DB_DATABASE_IMAGE', 'image_db')
     }
-
     # 构建连接字符串
     connection_string = (
         f"mysql+pymysql://{db_config['username']}:{db_config['password']}"
         f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
     )
+
+    logger.info(f"connection_string: ${connection_string}")
 
     return DatabaseManager(connection_string)
 

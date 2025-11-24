@@ -13,9 +13,10 @@ def init_db():
     # 创建所有表
     Base.metadata.create_all(db_manager.engine)
 
-    # 或者删除所有表重新创建
-    # Base.metadata.drop_all(engine)
-    # Base.metadata.create_all(engine)
+    # 删除所有表重新创建
+    # print(f"删除所有表重新创建")
+    # Base.metadata.drop_all(db_manager.engine)
+    # Base.metadata.create_all(db_manager.engine)
 
 
 IMAGE_TYPES = [
