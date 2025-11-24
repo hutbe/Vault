@@ -28,6 +28,7 @@ pytorch_python11/
 
 # 资源文件
 shared_data/
+*.db
 
 # MariaDB 数据目录
 mariadb/data/
