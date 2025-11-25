@@ -1,130 +1,294 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+import os
+import sqlite3
 
-"""
-将 SQLite 数据库数据迁移到 MariaDB。
-前提：
-- 目标库的表结构已通过 Alembic/Flask-Migrate 或 Base.metadata.create_all 在 MariaDB 上创建好。
-- 你的 SQLAlchemy 模型定义了完整的类型与外键约束。
-使用：
-  python scripts/migrate_sqlite_to_mariadb.py \
-    --sqlite sqlite:///app.db \
-    --mariadb mysql+pymysql://user:pass@host:3306/dbname \
-    --batch-size 2000
-"""
+from datetime import datetime
+from loguru import logger
 
-import argparse
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.orm import sessionmaker,scoped_session
+
+from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, MetaData, Table, select, text
-from sqlalchemy.orm import Session
+# 更改下面为目标数据库
+MARIADB_DB_URL = "mysql+pymysql://hut:hut123456@127.0.0.1:3306/vault_db" # mariadb连接
+SQLITE_DB_FILE_PATH = "./migrations/vault.db"      # sqlite直接连接，读取数据用
 
-# TODO: 修改为你项目中 Base 的实际导入路径
-# 例如：from app.extensions import db; Base = db.Model  或  from app.models import Base
-from app.models import Base  # noqa: F401  # Base.metadata 将用于排序和表名参考
-from app.models import Base as AppBase  # 为了清晰引用
+SQLITE_DB_URL = f"sqlite:///{SQLITE_DB_FILE_PATH}"  # sqlalchemy 读取表结构用
+BATCH_SIZE = 2000
 
-DEFAULT_BATCH_SIZE = 2000
+class DatabaseManager:
+    def __init__(self, connection_url):
+        self.engine = create_engine(
+            connection_url,
+            # 连接池配置
+            poolclass=QueuePool,
+            pool_size=20,
+            max_overflow=30,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+
+            # 性能配置
+            echo_pool=False,  # 生产环境设为 False
+            echo=False,  # 生产环境设为 False
+
+            # 连接参数
+            connect_args={
+                'connect_timeout': 10,
+                'read_timeout': 60,
+                'write_timeout': 60,
+                'charset': 'utf8mb4'
+            }
+        )
+
+        # 线程安全的会话
+        self.session_factory = sessionmaker(
+            bind=self.engine,
+            autocommit=False,
+            autoflush=False,
+            expire_on_commit=False
+        )
+        self.ScopedSession = scoped_session(self.session_factory)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Migrate data from SQLite to MariaDB.")
-    parser.add_argument("--sqlite", required=True, help="SQLite SQLAlchemy URL, e.g. sqlite:///app.db")
-    parser.add_argument("--mariadb", required=True, help="MariaDB URL, e.g. mysql+pymysql://user:pass@host:3306/dbname")
-    parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="Batch size per insert")
-    parser.add_argument("--skip-tables", nargs="*", default=[], help="Table names to skip")
-    parser.add_argument("--only-tables", nargs="*", default=[], help="If set, migrate only these tables")
-    parser.add_argument("--truncate-target", action="store_true", help="Truncate target tables before load")
-    return parser.parse_args()
+    @contextmanager
+    def session_scope(self):
+        """提供事务范围的会话上下文"""
+        session = self.ScopedSession()
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            self.ScopedSession.remove()
+
+# 创建数据库引擎
+db_manager = DatabaseManager(MARIADB_DB_URL)
+
+def convert_row(table, row, columns):
+    # 针对特定列做转换示例
+    converted = []
+    for col, val in zip(columns, row):
+        if val is None:
+            converted.append(None)
+            continue
+        if col == 'created_at':
+            # SQLite 里可能是 '2024-05-01 13:20:11' 或时间戳
+            if isinstance(val, str):
+                converted.append(val)  # 直接用 DATETIME 格式
+            else:
+                converted.append(datetime.fromtimestamp(val).strftime('%Y-%m-%d %H:%M:%S'))
+        elif col == 'is_active':
+            converted.append(int(val))  # 确保是 0/1
+        else:
+            converted.append(val)
+    return converted
 
 
-@contextmanager
-def engine_connect(url, **kwargs):
-    eng = create_engine(url, pool_pre_ping=True, future=True, **kwargs)
+def sqlite_type_to_mysql(sqlite_type, col_name=''):
+    """将 SQLite 类型转换为 MySQL 类型"""
+    if not sqlite_type:
+        return 'TEXT'
+
+    sqlite_type = sqlite_type.upper()
+
+    # 特殊处理：如果是时间相关的 INTEGER 字段，使用 BIGINT
+    if 'INT' in sqlite_type:
+        # 检查字段名是否包含时间相关的关键词
+        time_keywords = ['id', 'birthday', 'left_day', 'leaveday']
+        if any(keyword in col_name.lower() for keyword in time_keywords):
+            return 'BIGINT'  # 使用 BIGINT 存储 Unix 时间戳
+        return 'INT'
+    elif 'CHAR' in sqlite_type or 'CLOB' in sqlite_type:
+        return 'TEXT'
+    elif 'TEXT' in sqlite_type:
+        return 'TEXT'
+    elif 'BLOB' in sqlite_type:
+        return 'BLOB'
+    elif 'REAL' in sqlite_type or 'FLOA' in sqlite_type or 'DOUB' in sqlite_type:
+        return 'DOUBLE'
+    elif 'DATE' in sqlite_type or 'TIME' in sqlite_type:
+        return 'DATETIME'
+    else:
+        return 'VARCHAR(255)'
+
+
+def convert_default_value(default_value, col_type, col_name):
+    """转换 SQLite 默认值为 MySQL 兼容格式"""
+    if default_value is None:
+        return None
+
+    # 转换为字符串进行处理
+    default_str = str(default_value).strip().strip("'\"")
+
+    # 处理日期时间相关的默认值
+    datetime_keywords = [
+        'CURRENT_TIMESTAMP',
+        'CURRENT_DATE',
+        'CURRENT_TIME',
+        "datetime('now')",
+        "date('now')",
+        "time('now')",
+        'now()',
+        '(datetime(\'now\'))',
+        '(CURRENT_TIMESTAMP)'
+    ]
+
+    # 检查是否是日期时间函数
+    for keyword in datetime_keywords:
+        if keyword.upper() in default_str.upper():
+            return 'CURRENT_TIMESTAMP'
+
+    # 如果是数字类型
+    if col_type in ['INT', 'DOUBLE', 'FLOAT']:
+        try:
+            # 尝试转换为数字
+            if '.' in default_str:
+                return float(default_str)
+            else:
+                return int(default_str)
+        except ValueError:
+            return None
+
+    # 字符串类型
+    return f"'{default_value}'"
+
+
+def create_mysql_tables_from_sqlite(sqlite_db_path, mysql_session, table_names):
+    """使用原生 SQL 在 MySQL 中创建表"""
+    sqlite_conn = sqlite3.connect(sqlite_db_path)
+    cursor = sqlite_conn.cursor()
+
     try:
-        with eng.connect() as conn:
-            yield conn
+        for table_name in table_names:
+            logger.info(f"正在创建表: {table_name}")
+
+            # 获取 SQLite 表结构
+            cursor.execute(f"PRAGMA table_info('{table_name}')")
+            columns_info = cursor.fetchall()
+
+            if not columns_info:
+                logger.warning(f"警告：表 {table_name} 没有列信息，跳过")
+                continue
+
+            logger.debug(f"表 {table_name} 的列信息: {columns_info}")
+
+            # 构建 MySQL CREATE TABLE 语句
+            column_definitions = []
+            primary_keys = []
+
+            for col in columns_info:
+                col_id, col_name, col_type, not_null, default_value, is_pk = col
+
+                # 转换类型
+                mysql_type = sqlite_type_to_mysql(col_type, col_name)
+
+                # 构建列定义
+                col_def = f"`{col_name}` {mysql_type}"
+
+                # 处理默认值
+                converted_default = convert_default_value(default_value, mysql_type, col_name)
+
+                # 添加 NOT NULL
+                if not_null and not is_pk:
+                    col_def += " NOT NULL"
+
+                # 添加默认值
+                if converted_default is not None:
+                    if converted_default == 'CURRENT_TIMESTAMP':
+                        col_def += " DEFAULT CURRENT_TIMESTAMP"
+                    elif isinstance(converted_default, (int, float)):
+                        col_def += f" DEFAULT {converted_default}"
+                    else:
+                        col_def += f" DEFAULT {converted_default}"
+
+                column_definitions.append(col_def)
+
+                if is_pk:
+                    primary_keys.append(f"`{col_name}`")
+
+            # 添加主键约束
+            if primary_keys:
+                column_definitions.append(f"PRIMARY KEY ({', '.join(primary_keys)})")
+
+            # 创建表的 SQL
+            create_table_sql = f"""
+            CREATE TABLE IF NOT EXISTS `{table_name}` (
+                {', '.join(column_definitions)}
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """
+
+            logger.debug(f"执行 SQL: {create_table_sql}")
+
+            # 执行创建表
+            mysql_session.execute(text(create_table_sql))
+            mysql_session.commit()
+            logger.info(f"表 {table_name} 创建成功")
+
+    except Exception as e:
+        logger.error(f"创建表时发生错误: {e}")
+        mysql_session.rollback()
+        raise
+
     finally:
-        eng.dispose()
-
-
-def sorted_tables():
-    # 依赖模型中的外键信息进行拓扑排序
-    return list(AppBase.metadata.sorted_tables)
-
-
-def reflect_table(conn, table_name):
-    # 仅用于读取源（SQLite）数据
-    meta = MetaData()
-    return Table(table_name, meta, autoload_with=conn)
-
-
-def migrate_table(src_conn, dst_conn, table, batch_size, truncate=False):
-    """
-    table: sqlalchemy Table (from Base.metadata.sorted_tables) 用于名称与顺序
-    从 SQLite 反射 source_table，再批量 select + insert 到目标 MariaDB。
-    """
-    table_name = table.name
-    source_table = reflect_table(src_conn, table_name)
-    target_table = table  # 目标端结构以模型为准
-
-    if truncate:
-        dst_conn.execute(text(f"TRUNCATE TABLE `{table_name}`"))
-
-    total_rows = 0
-    result = src_conn.execute(select(source_table))
-    while True:
-        rows = result.fetchmany(batch_size)
-        if not rows:
-            break
-
-        # 将 RowMapping 转换为 dict，确保只包含目标表的列，避免 SQLite 多余列/隐含列
-        dicts = []
-        tgt_cols = set(c.name for c in target_table.columns)
-        for r in rows:
-            d = {k: r[k] for k in r.keys() if k in tgt_cols}
-            dicts.append(d)
-
-        dst_conn.execute(target_table.insert(), dicts)
-        total_rows += len(dicts)
-    return total_rows
-
+        cursor.close()
+        sqlite_conn.close()
+        logger.debug("SQLite 表结构读取连接已关闭")
 
 def main():
-    args = parse_args()
+    # 创建数据库引擎
+    engine = create_engine(SQLITE_DB_URL)
+    # 创建 Inspector 对象
+    inspector = inspect(engine)
+    # 获取所有表名
+    table_names = inspector.get_table_names()
+    logger.info(f"所有的SQLite数据库表名： {table_names}")
 
-    tables = sorted_tables()
+    with db_manager.session_scope() as session:
+        # 第一步：创建表
+        logger.info("========== 开始创建表结构 ==========")
+        # create_mysql_tables_from_sqlite(SQLITE_DB_FILE_PATH, session, table_names)
+        logger.info("========== 表结构创建完成 ==========\n")
 
-    if args.only_tables:
-        only = set(args.only_tables)
-        tables = [t for t in tables if t.name in only]
+        sqlite_conn = sqlite3.connect(SQLITE_DB_FILE_PATH)
+        sqlite_conn.row_factory = sqlite3.Row
 
-    if args.skip_tables:
-        skip = set(args.skip_tables)
-        tables = [t for t in tables if t.name not in skip]
+        # 第二步：导入数据
+        logger.info("========== 开始导入数据 ==========")
+        for table in table_names:
+            # 获取列名
+            cur = sqlite_conn.execute(f'SELECT * FROM {table} LIMIT 0')
+            columns = [d[0] for d in cur.description]
 
-    # 连接源与目标
-    with engine_connect(args.sqlite) as src_conn, engine_connect(args.mariadb) as dst_conn:
-        # 提升导入性能：禁用外键/唯一检查（导入结束后恢复）
-        dst_conn.execute(text("SET FOREIGN_KEY_CHECKS=0"))
-        dst_conn.execute(text("SET UNIQUE_CHECKS=0"))
+            # 使用命名参数
+            placeholders = ','.join([f':{col}' for col in columns])
+            insert_sql = f'INSERT INTO {table} ({",".join(columns)}) VALUES ({placeholders})'
 
-        try:
-            # 可选：开启一个整体事务
-            with dst_conn.begin():
-                migrated_counts = {}
-                for t in tables:
-                    cnt = migrate_table(src_conn, dst_conn, t, args.batch_size, truncate=args.truncate_target)
-                    migrated_counts[t.name] = cnt
-                    print(f"[OK] {t.name}: migrated {cnt} rows")
+            offset = 0
+            while True:
+                rows = sqlite_conn.execute(f'SELECT * FROM {table} LIMIT {BATCH_SIZE} OFFSET {offset}').fetchall()
+                if not rows:
+                    break
 
-        finally:
-            dst_conn.execute(text("SET FOREIGN_KEY_CHECKS=1"))
-            dst_conn.execute(text("SET UNIQUE_CHECKS=1"))
-
-    print("Migration completed.")
-    return 0
+                # 关键修改：转换为字典列表
+                batch = []
+                for r in rows:
+                    converted_row = convert_row(table, tuple(r), columns)
+                    # 将转换后的 tuple/list 组合成字典
+                    row_dict = dict(zip(columns, converted_row))
+                    batch.append(row_dict)
 
 
-if __name__ == "__main__":
+                # 执行批量插入
+                session.execute(text(insert_sql), batch)
+                session.commit()
+
+                offset += BATCH_SIZE
+                print(f'Table {table}: imported {offset}')
+
+        sqlite_conn.close()
+
+if __name__ == '__main__':
     raise SystemExit(main())
