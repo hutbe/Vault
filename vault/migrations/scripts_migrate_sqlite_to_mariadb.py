@@ -11,8 +11,8 @@ from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
 
 # 更改下面为目标数据库
-MARIADB_DB_URL = "mysql+pymysql://hut:hut123456@127.0.0.1:3306/vault_db" # mariadb连接
-SQLITE_DB_FILE_PATH = "./migrations/vault.db"      # sqlite直接连接，读取数据用
+MARIADB_DB_URL = "mysql+pymysql://hut:hut123456@127.0.0.1:3306/home_db" # mariadb连接
+SQLITE_DB_FILE_PATH = "./migrations/surroundings.db"      # sqlite直接连接，读取数据用
 
 SQLITE_DB_URL = f"sqlite:///{SQLITE_DB_FILE_PATH}"  # sqlalchemy 读取表结构用
 BATCH_SIZE = 2000
@@ -262,9 +262,18 @@ def main():
             cur = sqlite_conn.execute(f'SELECT * FROM {table} LIMIT 0')
             columns = [d[0] for d in cur.description]
 
+            if 'createDate' in columns:
+                # 将原来的SQLite数据库中的createDate字段替换成create_date字段，转到mysql中
+                columns = [col.replace('createDate', 'create_date') for col in columns]
+
             # 使用命名参数
             placeholders = ','.join([f':{col}' for col in columns])
-            insert_sql = f'INSERT INTO {table} ({",".join(columns)}) VALUES ({placeholders})'
+            target_table = table
+            if table == 'surroundings':
+                # 将原来的SQLite数据库中的surroundings表, 映射到新数据库的home_climate表
+                target_table = 'home_climate'
+
+            insert_sql = f'INSERT INTO {target_table} ({",".join(columns)}) VALUES ({placeholders})'
 
             offset = 0
             while True:

@@ -1,3 +1,34 @@
+import re
+from flask import request, has_request_context
+
+def get_param(name, default=None, type_=int):
+    """更安全的实现，带上下文检查"""
+    if not has_request_context():
+        return default
+
+    value = None
+    if name in request.args:
+        value = request.args.get(name)
+    elif request.is_json:
+        data = request.get_json() or {}
+        value = data.get(name)
+    elif name in request.form:
+        value = request.form.get(name)
+
+    if value is None:
+        return default
+
+    if type_:
+        try:
+            if type_ == bool:
+                return value.lower() in ('true', '1', 'yes', 'on') if isinstance(value, str) else bool(value)
+            elif type_ == float:
+                temp = float(re.sub(r'[^\d.]+', '', value))
+            return type_(value)
+        except (ValueError, TypeError):
+            return default
+
+    return value
 
 def get_value_from_request_params_without_error(req, key):
     result, error = get_value_from_request_params(req, key)

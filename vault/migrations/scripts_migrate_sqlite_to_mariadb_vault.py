@@ -349,6 +349,10 @@ def migrate_table_data(table, sqlite_conn, session):
         cur = sqlite_conn.execute(f'SELECT * FROM {table} LIMIT 0')
         columns = [d[0] for d in cur.description]
 
+        if 'createDate' in columns:
+            # 将原来的SQLite数据库中的createDate字段替换成create_date字段，转到mysql中
+            columns = [col.replace('createDate', 'create_date') for col in columns]
+
         # 检查是否有 id 列
         has_id_column = 'id' in columns
 
@@ -378,9 +382,14 @@ def migrate_table_data(table, sqlite_conn, session):
                 logger.warning(f"  检查/移除自增属性失败: {e}")
                 session.rollback()
 
+        target_table = table
+        if table == 'surroundings':
+            # 将原来的SQLite数据库中的surroundings表, 映射到新数据库的home_climate表
+            target_table = 'home_climate'
+
         # 使用命名参数
         placeholders = ','.join([f':{col}' for col in columns])
-        insert_sql = f'INSERT INTO {table} ({",".join(columns)}) VALUES ({placeholders})'
+        insert_sql = f'INSERT INTO {target_table} ({",".join(columns)}) VALUES ({placeholders})'
 
         offset = 0
         total_rows = 0

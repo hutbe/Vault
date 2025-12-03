@@ -33,4 +33,6 @@ USER app
 EXPOSE 9090
 
 # Run gunicorn
+# gunicorn.config.py - gunicorn配置文件路径
+# wsgi:app - 应用程序入口，指向 wsgi. py 文件中的 app 对象
 CMD ["gunicorn", "--config", "gunicorn.config.py", "wsgi:app"]
