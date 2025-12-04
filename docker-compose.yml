@@ -19,7 +19,7 @@ services:
   mariadb:
     image: mariadb:latest
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never
-    container_name: mariadb-server
+    container_name: mariadb
     restart: unless-stopped
     ports:
       - "${DB_PORT:-3306}:3306"
@@ -50,7 +50,7 @@ services:
   # Nginx代理服务器
   nginx:
     build: ./nginx
-    container_name: nginx-server
+    container_name: nginx
     restart: unless-stopped
     ports:
       - "80:80"
