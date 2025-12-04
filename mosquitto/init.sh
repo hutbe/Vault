@@ -16,7 +16,7 @@ chmod -R 755 config data log certs
 
 # 3. 生成 SSL 证书 如果没有公共证书,生成使用自签名证书
 # echo "3. 生成 SSL 证书..."
-# bash generate-certs.sh
+bash generate-certs.sh
 
 # 4. 启动 Docker 容器
 echo "4.  启动 Mosquitto 容器..."
