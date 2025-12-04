@@ -22,7 +22,7 @@ services:
     container_name: mariadb-server
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-3306}:3306"
     env_file:
       - .env # 从 .env 文件加载环境变量 容器环境变量默认加载.env 文件, 指定其他文件不会加载到容器环境变量中
     # 如果上面文件 .env 中的变量名和容器需要的变量名一致，就不需要下面的 environment 了
@@ -75,6 +75,25 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0.22-openssl
+    container_name: mosquitto
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${MQTT_PORT:-1883}:1883"     # MQTT
+      - "${MQTTS_PORT:-8883}:8883"    # MQTT over SSL
+      - "${MQTT_WebSocket_PORT:-9010}:9010" # WebSocket
+      - "${MQTTS_WebSocket_PORT:-9011}:9011" # WebSocket
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+      - ./mosquitto/certs:/mosquitto/certs
+    networks:
+      - app-network
 
 networks:
   app-network:

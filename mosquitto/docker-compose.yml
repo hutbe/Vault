@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"   # MQTT
+      - "8883:8883"   # MQTT over SSL
+      - "9001:9001"   # WebSocket
+    volumes:
+      - ./config:/mosquitto/config
+      - ./data:/mosquitto/data
+      - ./log:/mosquitto/log
+      - ./certs:/mosquitto/certs
+    networks:
+      - mosquitto_network
+
+networks:
+  mosquitto_network:
+    driver: bridge

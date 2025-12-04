@@ -35,10 +35,14 @@ mariadb/data/
 mariadb/data/*
 
 # nginx 配置文件
-nginx/certs/*.key
-nginx/certs/*.crt
-nginx/certs/*.pem
+nginx/certs/
 nginx/log/
+
+# mqtt mosquitto 数据
+/mosquitto/config/
+/mosquitto/certs/
+/mosquitto/data/
+/mosquitto/log/
 
 # 临时文件和日志
 *.tmp

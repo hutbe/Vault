@@ -21,3 +21,5 @@ python-dotenv>=1.2.1
 loguru>=0.7.3
 
 # ===== 开发工具（可选） =====
+# MQTT Client 测试工具
+paho-mqtt==2.1.0
