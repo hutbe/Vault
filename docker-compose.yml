@@ -16,6 +16,18 @@ services:
     networks:
       - app-network
 
+  mqtt_client:
+    build: ./mqtt_client
+    pull_policy: if_not_present  # 或者使用 if_not_present, always, never
+    container_name: mqtt_client
+    restart: unless-stopped
+    ports:
+      - "8020:8020"
+    env_file:
+      - ./mqtt_client/.env
+    networks:
+      - app-network
+
   mariadb:
     image: mariadb:latest
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never

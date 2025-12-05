@@ -1,0 +1,35 @@
+# Swift build artifacts
+.build/
+*.swiftpm
+.swiftpm/
+
+# Xcode
+xcuserdata/
+*.xcodeproj
+*.xcworkspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# 文档和测试
+Tests/
+*.md
+LICENSE
+
+# 依赖管理
+Package.resolved
+
+# 日志和临时文件
+*.log
+tmp/
+temp/
