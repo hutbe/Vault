@@ -123,3 +123,20 @@ sudo systemctl status mqtt-server
 ## 许可证
 
 MIT License
+
+
+Swift Command Line
+
+```
+# 清理之前的构建
+swift package clean
+
+# 更新依赖
+swift package update
+
+# 构建
+swift build
+
+# 运行
+swift run
+```

@@ -47,3 +47,8 @@ nginx/log/
 # 临时文件和日志
 *.tmp
 *.log
+
+
+# swift 和 Xcode相关
+.build/
+.swiftpm/

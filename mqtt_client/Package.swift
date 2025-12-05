@@ -28,3 +28,6 @@ let package = Package(
         ),
     ]
 )
+
+
+// package(url: "https://github.com/vapor/mysql-kit.git", from: "4. 8.0")

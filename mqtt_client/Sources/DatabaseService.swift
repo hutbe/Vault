@@ -7,44 +7,47 @@ class DatabaseService {
     private let logger = Logger(label: "com.mqttserver.database")
     private let eventLoopGroup: EventLoopGroup
     private var connection: MySQLConnection?
-
+    
     init(eventLoopGroup: EventLoopGroup) throws {
         self.eventLoopGroup = eventLoopGroup
-        try connectToDatabase()
     }
-
-    private func connectToDatabase() throws {
-        let config = MySQLConnection.Configuration(
-            serverAddress: . makeAddressResolvingHost(
+    
+    func connect() -> EventLoopFuture<Void> {
+        print("数据库连接配置 dbHost: \(Configuration.dbHost) dbPort: \(Configuration.dbPort) dbUsername: \(Configuration.dbUsername) dbPassword: \(Configuration.dbPassword) dbDatabase: \(Configuration.dbDatabase)")
+        // 创建数据库连接配置
+        let address: SocketAddress
+        do {
+            address = try SocketAddress.makeAddressResolvingHost(
                 Configuration.dbHost,
                 port: Configuration.dbPort
-            ),
+            )
+        } catch {
+            return eventLoopGroup.next().makeFailedFuture(error)
+        }
+        
+        return MySQLConnection.connect(
+            to: address,
             username: Configuration.dbUsername,
+            database: Configuration.dbDatabase,
             password: Configuration.dbPassword,
-            database: Configuration.dbDatabase
-        )
-
-        MySQLConnection.connect(
-            to: config,
+            tlsConfiguration: nil,
             on: eventLoopGroup.next()
-        ).whenComplete { result in
-            switch result {
-            case .success(let connection):
-                self.connection = connection
-                self.logger. info("已连接到 MariaDB 数据库")
-            case . failure(let error):
-                self.logger.error("数据库连接失败: \(error)")
-            }
+        ).map { connection in
+            self.connection = connection
+            self.logger.info("已连接到 MariaDB 数据库")
+        }.flatMapError { error in
+            self.logger.error("数据库连接失败: \(error)")
+            return self.eventLoopGroup.next().makeFailedFuture(error)
         }
     }
-
+    
     func initializeDatabase() -> EventLoopFuture<Void> {
         guard let connection = connection else {
             return eventLoopGroup.next().makeFailedFuture(
-                NSError(domain: "Database", code: -1, userInfo: [NSLocalizedDescriptionKey: "数据库未连接"])
+                DatabaseError.notConnected
             )
         }
-
+        
         let createTableSQL = """
         CREATE TABLE IF NOT EXISTS mqtt_messages (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -55,23 +58,23 @@ class DatabaseService {
             INDEX idx_received_at (received_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
-
-        return connection.query(createTableSQL).map { _ in
+        
+        return connection.simpleQuery(createTableSQL).map { _ in
             self.logger.info("数据库表初始化完成")
         }
     }
-
+    
     func saveMessage(topic: String, payload: String) -> EventLoopFuture<Void> {
         guard let connection = connection else {
-            return eventLoopGroup.next(). makeFailedFuture(
-                NSError(domain: "Database", code: -1, userInfo: [NSLocalizedDescriptionKey: "数据库未连接"])
+            return eventLoopGroup.next().makeFailedFuture(
+                DatabaseError.notConnected
             )
         }
-
+        
         let insertSQL = """
         INSERT INTO mqtt_messages (topic, payload) VALUES (?, ?)
         """
-
+        
         return connection.query(insertSQL, [
             MySQLData(string: topic),
             MySQLData(string: payload)
@@ -79,8 +82,16 @@ class DatabaseService {
             self.logger.debug("消息已插入数据库")
         }
     }
-
-    deinit {
-        try? connection?.close(). wait()
+    
+    func close() -> EventLoopFuture<Void> {
+        guard let connection = connection else {
+            return eventLoopGroup.next().makeSucceededVoidFuture()
+        }
+        return connection.close()
     }
+}
+
+enum DatabaseError: Error {
+    case notConnected
+    case configurationError(String)
 }
