@@ -1,0 +1,40 @@
+//
+//  File.swift
+//  MQTTServerApp
+//
+//  Created by hut on 2025/12/5.
+//
+
+import Foundation
+
+enum Configuration {
+    // MQTT 配置
+    static let mqttHost = ProcessInfo.processInfo.environment["MQTT_HOST"] ??  "127.0.0.1"
+    static let mqttPort = Int(ProcessInfo.processInfo.environment["MQTT_PORT"] ?? "1883") ?? 1883
+    static let mqttUsername = ProcessInfo.processInfo.environment["MQTT_USERNAME"] ?? "root"
+    static let mqttPassword = ProcessInfo.processInfo.environment["MQTT_PASSWORD"] ??  "hut123456"
+    static let mqttClientId = ProcessInfo.processInfo.environment["MQTT_CLIENT_ID"] ?? "swift-mqtt-client-\(UUID().uuidString)"
+    static let mqttTopic = ProcessInfo.processInfo.environment["MQTT_TOPIC"] ?? "test/updates"
+    static let mqttUseSSL = ProcessInfo.processInfo.environment["MQTT_USE_SSL"] == "true"
+    static let mqttKeepAlive = Int(ProcessInfo.processInfo.environment["MQTT_KEEP_ALIVE"] ?? "60") ?? 60
+    
+    // MariaDB 配置
+    static let dbHost = ProcessInfo.processInfo.environment["DB_HOST"] ?? "127.0.0.1"
+    static let dbPort = Int(ProcessInfo.processInfo.environment["DB_PORT"] ?? "3306") ?? 3306
+    static let dbUsername = ProcessInfo.processInfo.environment["DB_USERNAME"] ?? "hut"
+    static let dbPassword = ProcessInfo.processInfo.environment["DB_PASSWORD"] ??  "hut123456"
+    static let dbDatabase = ProcessInfo.processInfo.environment["DB_DATABASE"] ?? "test"
+    
+    // 打印配置（用于调试，注意不要打印敏感信息）
+    static func printConfiguration() {
+        print("=== 配置信息 ===")
+        print("MQTT Broker: \(mqttHost):\(mqttPort)")
+        print("MQTT Username: \(mqttUsername.isEmpty ? "(未设置)" : "***")")
+        print("MQTT Password: \(mqttPassword.isEmpty ? "(未设置)" : "***")")
+        print("MQTT Use SSL: \(mqttUseSSL)")
+        print("MQTT Topic: \(mqttTopic)")
+        print("MQTT Client ID: \(mqttClientId)")
+        print("Database: \(dbUsername)@\(dbHost):\(dbPort)/\(dbDatabase)")
+        print("================")
+    }
+}

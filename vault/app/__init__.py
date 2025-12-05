@@ -2,6 +2,7 @@ import os
 from importlib import import_module
 from pathlib import Path
 from flask import Flask
+from flask_cors import CORS
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -63,6 +64,16 @@ def create_app(config_class=None) -> Flask:
         config_obj = config_class
 
     flask_app.config.from_object(config_obj)
+
+    # 配置 跨域资源共享（Cross-origin resource sharing)
+    # 仅允许指定前端源，生产环境不要用 '*'
+    CORS(flask_app,
+         resources={r"*": {"origins": ["http://localhost:3000", "https://ahut.site:8081", "http://macmini.local:8010"]}},
+         supports_credentials=True,  # 如果前端需要带 cookie/token
+         methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+         allow_headers=["Content-Type", "Authorization"],
+         expose_headers=["X-Total-Count"],  # 可选：让前端可读这些自定义响应头
+         max_age=86400)  # 预检结果缓存
 
     # 打印所有环境变量
     # logger.info("===== 环境变量 ====")

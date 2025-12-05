@@ -1,7 +1,15 @@
+//
+//  File.swift
+//  MQTTServerApp
+//
+//  Created by hut on 2025/12/5.
+//
+
 import Foundation
 import MQTTNIO
 import MySQLNIO
 import NIO
+import NIOSSL
 import Logging
 
 class MQTTServerApp {
@@ -18,6 +26,8 @@ class MQTTServerApp {
         self.databaseService = try DatabaseService(eventLoopGroup: eventLoopGroup)
         
         logger.info("应用初始化成功")
+        
+        Configuration.printConfiguration()
     }
     
     func run() throws {
@@ -30,7 +40,7 @@ class MQTTServerApp {
         try connectMQTT()
         
         // 保持程序运行
-        logger.info("服务器运行中...按 Ctrl+C 退出")
+        logger.info("服务器运行中... 按 Ctrl+C 退出")
         
         // 处理退出信号
         signal(SIGINT) { _ in
@@ -42,13 +52,25 @@ class MQTTServerApp {
     }
     
     private func connectMQTT() throws {
+        // 配置 TLS（如果需要）
+//        let tlsConfiguration: TLSConfiguration?  = Configuration.mqttUseSSL ?
+//            TLSConfiguration.makeClientConfiguration() : nil
+        
+        // 创建 MQTT 客户端配置
+        let clientConfiguration = MQTTClient.Configuration(
+            keepAliveInterval:.seconds(Int64(Configuration.mqttKeepAlive)),
+            userName:Configuration.mqttPassword,
+            password: Configuration.mqttUsername
+        )
+        
         // 创建 MQTT 客户端
         self.mqttClient = MQTTClient(
             host: Configuration.mqttHost,
             port: Configuration.mqttPort,
             identifier: Configuration.mqttClientId,
             eventLoopGroupProvider: .shared(eventLoopGroup),
-            logger: logger
+            logger: logger,
+            configuration: clientConfiguration
         )
         
         guard let client = mqttClient else {
@@ -56,27 +78,28 @@ class MQTTServerApp {
         }
         
         // 连接到 broker
-        client.connect(
-            cleanSession: true,
-            will: nil
-        ).flatMap { _ -> EventLoopFuture<Void> in
+        let connectFuture = client.connect()
+        
+        connectFuture.whenSuccess { _ in
             self.logger.info("已连接到 MQTT Broker: \(Configuration.mqttHost):\(Configuration.mqttPort)")
             
-            // 订阅主题并转换返回类型为 Void
-            return client.subscribe(to: [
+            // 订阅主题
+            let subscribeFuture = client.subscribe(to: [
                 MQTTSubscribeInfo(topicFilter: Configuration.mqttTopic, qos: .atLeastOnce)
-            ]).map { suback -> Void in
+            ])
+            
+            subscribeFuture.whenSuccess { suback in
                 self.logger.info("已订阅主题: \(Configuration.mqttTopic)")
                 self.logger.debug("订阅响应: \(suback)")
-                return ()
             }
-        }.whenComplete { result in
-            switch result {
-            case .success:
-                self.logger.info("MQTT 连接和订阅完成")
-            case .failure(let error):
-                self.logger.error("MQTT 设置失败: \(error)")
+            
+            subscribeFuture.whenFailure { error in
+                self.logger.error("订阅失败: \(error)")
             }
+        }
+        
+        connectFuture.whenFailure { error in
+            self.logger.error("连接 MQTT Broker 失败: \(error)")
         }
         
         // 处理接收到的消息
@@ -125,4 +148,6 @@ class MQTTServerApp {
 
 enum MQTTError: Error {
     case clientCreationFailed
+    case connectionFailed(String)
+    case subscriptionFailed(String)
 }

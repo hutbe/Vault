@@ -1,0 +1,20 @@
+{
+  "mqtt": {
+    "host": "127.0.0.1",
+    "port": 1883,
+    "username": "test",
+    "password": "hut123456",
+    "client_id": "swift-mqtt-client",
+    "topic": "test/data",
+    "use_ssl": false,
+    "keep_alive": 60,
+    "qos": 1
+  },
+  "database": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "username": "hut",
+    "password": "hut123456",
+    "database": "test"
+  }
+}

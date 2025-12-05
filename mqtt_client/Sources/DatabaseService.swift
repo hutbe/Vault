@@ -13,7 +13,6 @@ class DatabaseService {
     }
     
     func connect() -> EventLoopFuture<Void> {
-        print("数据库连接配置 dbHost: \(Configuration.dbHost) dbPort: \(Configuration.dbPort) dbUsername: \(Configuration.dbUsername) dbPassword: \(Configuration.dbPassword) dbDatabase: \(Configuration.dbDatabase)")
         // 创建数据库连接配置
         let address: SocketAddress
         do {
