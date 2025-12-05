@@ -59,8 +59,8 @@ class MQTTServerApp {
         // 创建 MQTT 客户端配置
         let clientConfiguration = MQTTClient.Configuration(
             keepAliveInterval:.seconds(Int64(Configuration.mqttKeepAlive)),
-            userName:Configuration.mqttPassword,
-            password: Configuration.mqttUsername
+            userName:Configuration.mqttUsername,
+            password: Configuration.mqttPassword
         )
         
         // 创建 MQTT 客户端

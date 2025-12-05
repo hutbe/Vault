@@ -9,9 +9,9 @@ import Foundation
 
 enum Configuration {
     // MQTT 配置
-    static let mqttHost = ProcessInfo.processInfo.environment["MQTT_HOST"] ??  "127.0.0.1"
+    static let mqttHost = ProcessInfo.processInfo.environment["MQTT_HOST"] ??  "macmini.local"
     static let mqttPort = Int(ProcessInfo.processInfo.environment["MQTT_PORT"] ?? "1883") ?? 1883
-    static let mqttUsername = ProcessInfo.processInfo.environment["MQTT_USERNAME"] ?? "root"
+    static let mqttUsername = ProcessInfo.processInfo.environment["MQTT_USERNAME"] ?? "admin"
     static let mqttPassword = ProcessInfo.processInfo.environment["MQTT_PASSWORD"] ??  "hut123456"
     static let mqttClientId = ProcessInfo.processInfo.environment["MQTT_CLIENT_ID"] ?? "swift-mqtt-client-\(UUID().uuidString)"
     static let mqttTopic = ProcessInfo.processInfo.environment["MQTT_TOPIC"] ?? "test/updates"
@@ -19,7 +19,7 @@ enum Configuration {
     static let mqttKeepAlive = Int(ProcessInfo.processInfo.environment["MQTT_KEEP_ALIVE"] ?? "60") ?? 60
     
     // MariaDB 配置
-    static let dbHost = ProcessInfo.processInfo.environment["DB_HOST"] ?? "127.0.0.1"
+    static let dbHost = ProcessInfo.processInfo.environment["DB_HOST"] ?? "macmini.local"
     static let dbPort = Int(ProcessInfo.processInfo.environment["DB_PORT"] ?? "3306") ?? 3306
     static let dbUsername = ProcessInfo.processInfo.environment["DB_USERNAME"] ?? "hut"
     static let dbPassword = ProcessInfo.processInfo.environment["DB_PASSWORD"] ??  "hut123456"
