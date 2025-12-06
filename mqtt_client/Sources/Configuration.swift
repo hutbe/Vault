@@ -14,7 +14,7 @@ enum Configuration {
     static let mqttUsername = ProcessInfo.processInfo.environment["MQTT_USERNAME"] ?? "admin"
     static let mqttPassword = ProcessInfo.processInfo.environment["MQTT_PASSWORD"] ??  "hut123456"
     static let mqttClientId = ProcessInfo.processInfo.environment["MQTT_CLIENT_ID"] ?? "swift-mqtt-client-\(UUID().uuidString)"
-    static let mqttTopic = ProcessInfo.processInfo.environment["MQTT_TOPIC"] ?? "test/updates"
+    static let mqttTopic = ProcessInfo.processInfo.environment["MQTT_TOPIC"] ?? "test/data"
     static let mqttUseSSL = ProcessInfo.processInfo.environment["MQTT_USE_SSL"] == "true"
     static let mqttKeepAlive = Int(ProcessInfo.processInfo.environment["MQTT_KEEP_ALIVE"] ?? "60") ?? 60
     
