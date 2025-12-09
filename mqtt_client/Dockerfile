@@ -36,6 +36,9 @@ FROM debian:bookworm
 #     libc6 \
 #     && rm -rf /var/lib/apt/lists/*
 
+# 声明卷挂载点，docker-compose 可以实际挂载这些卷
+VOLUME ["/app/logs"]
+
 # 创建非 root 用户
 RUN useradd -m -s /bin/bash mqtt_client_user
 

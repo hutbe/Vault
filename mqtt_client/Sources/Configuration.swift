@@ -28,18 +28,18 @@ enum Configuration {
     static let dbPort = Int(ProcessInfo.processInfo.environment["DB_PORT"] ?? "3306") ?? 3306
     static let dbUsername = ProcessInfo.processInfo.environment["DB_USERNAME"] ?? "hut"
     static let dbPassword = ProcessInfo.processInfo.environment["DB_PASSWORD"] ??  "hut123456"
-    static let dbDatabase = ProcessInfo.processInfo.environment["DB_DATABASE"] ?? "test"
+    static let dbDatabase = ProcessInfo.processInfo.environment["DB_DATABASE"] ?? "home_db"
     
     // 打印配置（用于调试，注意不要打印敏感信息）
     static func printConfiguration() {
-        print("=== 配置信息 ===")
-        print("MQTT Broker: \(mqttHost):\(mqttPort)")
-        print("MQTT Username: \(mqttUsername.isEmpty ? "(未设置)" : "***")")
-        print("MQTT Password: \(mqttPassword.isEmpty ? "(未设置)" : "***")")
-        print("MQTT Use SSL: \(mqttUseSSL)")
-        print("MQTT Topics: \(mqttTopics.joined(separator: ", "))")
-        print("MQTT Client ID: \(mqttClientId)")
-        print("Database: \(dbUsername)@\(dbHost):\(dbPort)/\(dbDatabase)")
-        print("================")
+        logger.info("=== 配置信息 ===")
+        logger.info("MQTT Broker: \(mqttHost):\(mqttPort)")
+        logger.info("MQTT Username: \(mqttUsername.isEmpty ? "(未设置)" : "***")")
+        logger.info("MQTT Password: \(mqttPassword.isEmpty ? "(未设置)" : "***")")
+        logger.info("MQTT Use SSL: \(mqttUseSSL)")
+        logger.info("MQTT Topics: \(mqttTopics.joined(separator: ", "))")
+        logger.info("MQTT Client ID: \(mqttClientId)")
+        logger.info("Database: \(dbUsername)@\(dbHost):\(dbPort)/\(dbDatabase)")
+        logger.info("================")
     }
 }

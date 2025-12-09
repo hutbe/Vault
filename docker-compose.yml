@@ -27,6 +27,8 @@ services:
       - ./mqtt_client/.env
     networks:
       - app-network
+    volumes:
+      - ./mqtt_client/logs:/app/logs
 
   mariadb:
     image: mariadb:latest

@@ -210,7 +210,7 @@ class DatabaseService {
             
             // 示例表：sensor dht22
             """
-            CREATE TABLE IF NOT EXISTS sensor_dht22_iso (
+            CREATE TABLE IF NOT EXISTS sensor_dht22 (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 sensor_id INT NOT NULL,
                 temperature DECIMAL(4,1) NOT NULL,
@@ -282,7 +282,9 @@ class DatabaseService {
         }
         
         // 匹配 sensor/dht22/+/data 模式
+        logger.info("匹配 sensor/dht22/+/data 模式 topic: \(topic)")
         if matchesMQTTPattern(topic: topic, pattern: "sensor/dht22/+/data") {
+            logger.info("匹配2 topic: \(topic)")
             return saveSensorDHT22Data(topic: topic, payload: payload, connection: connection)
         }
         // 匹配 note/+/home 模式
@@ -317,13 +319,13 @@ class DatabaseService {
         // 解析 ISO 8601 时间戳
         let dateFormatter = ISO8601DateFormatter()
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let createdAt = dateFormatter.date(from: createdAtISO) else {
+        guard let createdAt = iso8601ToMySQLTimestampNoMillisToDate(createdAtISO)else {
             logger.error("无法解析时间戳: \(createdAtISO)")
             return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
         }
         
         let insertSQL = """
-        INSERT INTO sensor_dht22_iso (sensor_id, temperature, humidity, created_at, created_at_iso)
+        INSERT INTO sensor_dht22 (sensor_id, temperature, humidity, created_at, created_at_iso)
         VALUES (?, ?, ?, ?, ?)
         """
         
@@ -351,8 +353,13 @@ class DatabaseService {
             return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
         }
         
-        // payload 直接作为 content
-        let content = payload
+        // 解析 JSON payload
+        guard let jsonData = payload.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+              let content = json["content"] as? String else {
+            logger.error("content 数据格式错误: \(payload)")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
         
         let insertSQL = """
         INSERT INTO note (user_id, content) VALUES (?, ?)

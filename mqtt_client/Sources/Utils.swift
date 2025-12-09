@@ -87,7 +87,8 @@ func iso8601ToMySQLTimestampNoMillis(_ iso: String) -> String? {
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
         // 这里把无时区字符串当作 UTC 处理；如果设备文档说明为本地时间，请改为相应时区
-        df.timeZone = TimeZone(secondsFromGMT: 0)
+        // df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.timeZone = TimeZone(identifier: "Asia/Shanghai")
         for fmt in fallbackFormats {
             df.dateFormat = fmt
             if let d = df.date(from: iso) {
@@ -108,4 +109,50 @@ func iso8601ToMySQLTimestampNoMillis(_ iso: String) -> String? {
     outFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"     // 无毫秒
 
     return outFormatter.string(from: finalDate)
+}
+
+/// 将设备上报的 ISO8601 字符串转换为 MySQL 可接受的无毫秒时间字符串（UTC）
+/// 返回值示例："2025-12-09 08:30:00"
+func iso8601ToMySQLTimestampNoMillisToDate(_ iso: String) -> Date? {
+    // 优先使用 ISO8601DateFormatter，支持带/不带小数秒和时区
+    let isoWithFrac = ISO8601DateFormatter()
+    isoWithFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+    var date: Date? = isoWithFrac.date(from: iso)
+
+    // 回退到不带 fractionalSeconds 的解析
+    if date == nil {
+        let isoNoFrac = ISO8601DateFormatter()
+        isoNoFrac.formatOptions = [.withInternetDateTime]
+        date = isoNoFrac.date(from: iso)
+    }
+
+    // 兜底：尝试常见格式（视设备实际输出决定是否需要）
+    if date == nil {
+        let fallbackFormats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ssXXXXX",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss"
+        ]
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        // 这里把无时区字符串当作 UTC 处理；如果设备文档说明为本地时间，请改为相应时区
+        // df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        for fmt in fallbackFormats {
+            df.dateFormat = fmt
+            if let d = df.date(from: iso) {
+                date = d
+                break
+            }
+        }
+    }
+
+    guard let finalDate = date else {
+        return nil
+    }
+
+    return finalDate
 }

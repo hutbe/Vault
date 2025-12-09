@@ -11,9 +11,6 @@ final class SafeLogConfiguration {
     private static let configureOnce:  Void = {
         let logsDirectory = URL(fileURLWithPath: "./logs")
         let logFileURL = logsDirectory.appendingPathComponent("server.log")
-        
-        print("🔧 配置日志系统，日志文件路径: \(logFileURL.path)")
-        
         LoggingSystem.bootstrap { label in
             let fileHandler = try! AdvancedFileLogHandler(
                 label: label,
@@ -21,9 +18,12 @@ final class SafeLogConfiguration {
                 maxFileSize: 50 * 1024 * 1024,
                 maxBackupCount:  10
             )
-            
-            let consoleHandler = StreamLogHandler.standardOutput(label: label)
-            return MultiplexLogHandler([fileHandler, consoleHandler])
+            if isTestMode {
+                let consoleHandler = StreamLogHandler.standardOutput(label: label)
+                return MultiplexLogHandler([fileHandler, consoleHandler])
+            } else {
+                return MultiplexLogHandler([fileHandler])
+            }
         }
         
         print("✅ 日志系统已配置")
