@@ -136,31 +136,140 @@ class DatabaseService {
         return .seconds(Int64(seconds))
     }
     
-    func initializeDatabase() -> EventLoopFuture<Void> {
-        guard let connection = connection else {
-            triggerReconnect()
-            return eventLoopGroup.next().makeFailedFuture(
-                DatabaseError.notConnected
-            )
+//    func initializeDatabase() -> EventLoopFuture<Void> {
+//        guard let connection = connection else {
+//            triggerReconnect()
+//            return eventLoopGroup.next().makeFailedFuture(
+//                DatabaseError.notConnected
+//            )
+//        }
+//
+//        let createTableSQL = """
+//        CREATE TABLE IF NOT EXISTS mqtt_messages (
+//            id INT AUTO_INCREMENT PRIMARY KEY,
+//            topic VARCHAR(255) NOT NULL,
+//            payload TEXT NOT NULL,
+//            received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+//            INDEX idx_topic (topic),
+//            INDEX idx_received_at (received_at)
+//        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+//        """
+//
+//        return connection.simpleQuery(createTableSQL).map { _ in
+//            self.logger.info("数据库表初始化完成")
+//        }.flatMapError { error in
+//            self.logger.error("初始化数据库表失败: \(error)，触发重连")
+//            self.triggerReconnect()
+//            return self.eventLoopGroup.next().makeFailedFuture(error)
+//        }
+//    }
+    
+    func initializeDatabase(useTransaction: Bool = true) -> EventLoopFuture<Void> {
+        guard let conn = connection else {
+            return eventLoopGroup.next().makeFailedFuture(DatabaseError.notConnected)
         }
-        
-        let createTableSQL = """
-        CREATE TABLE IF NOT EXISTS mqtt_messages (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            topic VARCHAR(255) NOT NULL,
-            payload TEXT NOT NULL,
-            received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_topic (topic),
-            INDEX idx_received_at (received_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        """
-        
-        return connection.simpleQuery(createTableSQL).map { _ in
-            self.logger.info("数据库表初始化完成")
-        }.flatMapError { error in
-            self.logger.error("初始化数据库表失败: \(error)，触发重连")
-            self.triggerReconnect()
-            return self.eventLoopGroup.next().makeFailedFuture(error)
+
+        let statements: [String] = [
+            
+            /**
+             传感器数据
+             sensor/dht22/1/data
+             sensor/dht22/2/data
+             sensor/dht22/10/data
+
+             `specific`          : 0
+             `livingroom`        : 1
+             `fridge`            : 2
+             `office`             : 10
+
+             笔记
+             note/0/home
+             note/${user_id}/home/
+
+             `notification`      : 0
+             `user_id`           : user
+
+             信息
+             message/home
+
+             `sensor/dht22/+/data`: 订阅所有的dht22传感器数据
+             `note/+/home`: 订阅所有的hom笔记
+             */
+            
+            // 示例表：mqtt_messages
+            """
+            CREATE TABLE IF NOT EXISTS mqtt_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                topic VARCHAR(255) NOT NULL,
+                payload TEXT NOT NULL,
+                received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_topic (topic),
+                INDEX idx_received_at (received_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """,
+            
+            // 示例表：sensor dht22
+            """
+            CREATE TABLE IF NOT EXISTS sensor_dht22_iso (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sensor_id INT NOT NULL,
+                temperature DECIMAL(4,1) NOT NULL,
+                humidity DECIMAL(4,1) NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                -- 存储 ISO 8601 原始字符串，例如:
+                -- "2025-12-09T08:00:00Z" 或 "2025-12-09T08:00:00+08:00"
+                created_at_iso CHAR(33) NOT NULL,
+                -- 服务器接收时间（带毫秒精度）
+                received_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """,
+            
+            // 示例表：note
+            """
+            CREATE TABLE IF NOT EXISTS note (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                content TEXT NOT NULL, 
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """
+        ]
+
+        // Helper: 顺序执行语句数组
+        func runStatementsSequentially(_ stmts: [String]) -> EventLoopFuture<Void> {
+            let initial: EventLoopFuture<Void> = eventLoopGroup.next().makeSucceededFuture(())
+            return stmts.reduce(initial) { future, sql in
+                future.flatMap { _ in
+                    conn.simpleQuery(sql).map { _ in
+                        self.logger.debug("执行 SQL 完成: \(sql.split(separator: "\\n").first ?? "")")
+                    }
+                }
+            }
+        }
+
+        if useTransaction {
+            // START TRANSACTION -> run statements -> COMMIT, 出错时 ROLLBACK
+            return conn.simpleQuery("START TRANSACTION").flatMap { _ in
+                runStatementsSequentially(statements)
+            }.flatMap { _ in
+                conn.simpleQuery("COMMIT").map { _ in
+                    self.logger.info("数据库表创建事务提交成功")
+                }
+            }.flatMapError { err in
+                self.logger.error("初始化表时出错，尝试回滚: \(err)")
+                return conn.simpleQuery("ROLLBACK").flatMap { _ in
+                    self.eventLoopGroup.next().makeFailedFuture(err)
+                }.flatMapError { rbErr in
+                    // 回滚也失败，返回原始错误和回滚错误信息
+                    self.logger.error("回滚失败: \(rbErr)")
+                    return self.eventLoopGroup.next().makeFailedFuture(err)
+                }
+            }
+        } else {
+            // 非事务逐条执行
+            return runStatementsSequentially(statements).map {
+                self.logger.info("数据库表逐条创建完成（非事务）")
+            }
         }
     }
     
@@ -172,6 +281,97 @@ class DatabaseService {
             )
         }
         
+        // 匹配 sensor/dht22/+/data 模式
+        if matchesMQTTPattern(topic: topic, pattern: "sensor/dht22/+/data") {
+            return saveSensorDHT22Data(topic: topic, payload: payload, connection: connection)
+        }
+        // 匹配 note/+/home 模式
+        else if matchesMQTTPattern(topic: topic, pattern: "note/+/home") {
+            return saveNoteData(topic: topic, payload: payload, connection: connection)
+        }
+        // 默认保存到 mqtt_messages 表
+        else {
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+    }
+    
+    /// 保存 DHT22 传感器数据
+    private func saveSensorDHT22Data(topic: String, payload: String, connection: MySQLConnection) -> EventLoopFuture<Void> {
+        // 从 topic 提取 sensor_id，例如 "sensor/dht22/1/data" -> "1"
+        guard let sensorIdStr = extractFromTopic(topic, pattern: "sensor/dht22/+/data", wildcardIndex: 0),
+              let sensorId = Int(sensorIdStr) else {
+            logger.error("无法从主题 \(topic) 提取传感器ID")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+        
+        // 解析 JSON payload
+        guard let jsonData = payload.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+              let temperature = json["temperature"] as? Double,
+              let humidity = json["humidity"] as? Double,
+              let createdAtISO = json["created_at"] as? String else {
+            logger.error("DHT22 数据格式错误: \(payload)")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+        
+        // 解析 ISO 8601 时间戳
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let createdAt = dateFormatter.date(from: createdAtISO) else {
+            logger.error("无法解析时间戳: \(createdAtISO)")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+        
+        let insertSQL = """
+        INSERT INTO sensor_dht22_iso (sensor_id, temperature, humidity, created_at, created_at_iso)
+        VALUES (?, ?, ?, ?, ?)
+        """
+        
+        return connection.query(insertSQL, [
+            MySQLData(int: sensorId),
+            MySQLData(double: temperature),
+            MySQLData(double: humidity),
+            MySQLData(date: createdAt),
+            MySQLData(string: createdAtISO)
+        ]).map { _ in
+            self.logger.info("DHT22 传感器数据已保存: sensor_id=\(sensorId), temp=\(temperature)°C, humidity=\(humidity)%")
+        }.flatMapError { error in
+            self.logger.error("保存 DHT22 数据失败: \(error)")
+            self.triggerReconnect()
+            return self.eventLoopGroup.next().makeFailedFuture(error)
+        }
+    }
+    
+    /// 保存笔记数据
+    private func saveNoteData(topic: String, payload: String, connection: MySQLConnection) -> EventLoopFuture<Void> {
+        // 从 topic 提取 user_id，例如 "note/123/home" -> "123" 或 "note/0/home" -> "0"
+        guard let userIdStr = extractFromTopic(topic, pattern: "note/+/home", wildcardIndex: 0),
+              let userId = Int(userIdStr) else {
+            logger.error("无法从主题 \(topic) 提取用户ID")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+        
+        // payload 直接作为 content
+        let content = payload
+        
+        let insertSQL = """
+        INSERT INTO note (user_id, content) VALUES (?, ?)
+        """
+        
+        return connection.query(insertSQL, [
+            MySQLData(int: userId),
+            MySQLData(string: content)
+        ]).map { _ in
+            self.logger.info("笔记已保存: user_id=\(userId), content_length=\(content.count)")
+        }.flatMapError { error in
+            self.logger.error("保存笔记失败: \(error)")
+            self.triggerReconnect()
+            return self.eventLoopGroup.next().makeFailedFuture(error)
+        }
+    }
+    
+    /// 保存到默认的 mqtt_messages 表
+    private func saveToDefaultTable(topic: String, payload: String, connection: MySQLConnection) -> EventLoopFuture<Void> {
         let insertSQL = """
         INSERT INTO mqtt_messages (topic, payload) VALUES (?, ?)
         """
@@ -180,12 +380,76 @@ class DatabaseService {
             MySQLData(string: topic),
             MySQLData(string: payload)
         ]).map { _ in
-            self.logger.debug("消息已插入数据库")
+            self.logger.debug("消息已插入默认表: topic=\(topic)")
         }.flatMapError { error in
             self.logger.error("插入消息失败: \(error)，触发重连")
             self.triggerReconnect()
             return self.eventLoopGroup.next().makeFailedFuture(error)
         }
+    }
+    
+    // MARK: - MQTT Topic Matching Utilities
+    
+    /// 匹配 MQTT 主题模式，支持单层通配符 (+) 和多层通配符 (#)
+    /// - Parameters:
+    ///   - topic: 实际收到的主题，如 "sensor/dht22/1/data"
+    ///   - pattern: 订阅模式，如 "sensor/dht22/+/data"
+    /// - Returns: 是否匹配
+    private func matchesMQTTPattern(topic: String, pattern: String) -> Bool {
+        let topicLevels = topic.split(separator: "/").map(String.init)
+        let patternLevels = pattern.split(separator: "/").map(String.init)
+        
+        // 处理多层通配符 #（只能在最后）
+        if patternLevels.last == "#" {
+            // 模式必须短于或等于主题
+            if patternLevels.count - 1 > topicLevels.count {
+                return false
+            }
+            // 检查 # 之前的所有层级
+            for i in 0..<(patternLevels.count - 1) {
+                if patternLevels[i] != "+" && patternLevels[i] != topicLevels[i] {
+                    return false
+                }
+            }
+            return true
+        }
+        
+        // 不使用 # 时，层级数必须相同
+        guard topicLevels.count == patternLevels.count else {
+            return false
+        }
+        
+        // 逐层匹配
+        for (topicLevel, patternLevel) in zip(topicLevels, patternLevels) {
+            if patternLevel != "+" && patternLevel != topicLevel {
+                return false
+            }
+        }
+        
+        return true
+    }
+    
+    /// 从主题中提取特定位置的值
+    /// 例如: extractFromTopic("sensor/dht22/1/data", pattern: "sensor/dht22/+/data", wildcardIndex: 0) -> "1"
+    private func extractFromTopic(_ topic: String, pattern: String, wildcardIndex: Int) -> String? {
+        let topicLevels = topic.split(separator: "/").map(String.init)
+        let patternLevels = pattern.split(separator: "/").map(String.init)
+        
+        guard topicLevels.count == patternLevels.count else {
+            return nil
+        }
+        
+        var wildcardCount = 0
+        for (index, patternLevel) in patternLevels.enumerated() {
+            if patternLevel == "+" {
+                if wildcardCount == wildcardIndex {
+                    return topicLevels[index]
+                }
+                wildcardCount += 1
+            }
+        }
+        
+        return nil
     }
     
     func close() -> EventLoopFuture<Void> {

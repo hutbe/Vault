@@ -5,21 +5,25 @@ import NIO
 import Logging
 
 // 配置日志
-// 配置日志 - 使用闭包包装来符合 Sendable 要求
-LoggingSystem.bootstrap { label in
-    StreamLogHandler.standardOutput(label: label)
-}
+SafeLogConfiguration.configure()
+
 let logger = Logger(label: "com.mqttserver.main")
 
-// 启动应用
-do {
-    let app = try MQTTServerApp()
-    try app.run()
-} catch {
-    logger.error("应用启动失败: \(error)")
-    exit(1)
-}
+// 设置运行模式：true = 测试模式, false = 生产模式
+let isTestMode = false
 
-// 启动应用 - 测试用
-//let app = TestApp()
-//app.run()
+if isTestMode {
+    // 启动应用 - 测试用
+    print("========== 测试模式 ==========")
+    let app = TestApp()
+    app.run()
+} else {
+    // 启动应用 - 生产模式
+    do {
+        let app = try MQTTServerApp()
+        try app.run()
+    } catch {
+        logger.error("应用启动失败: \(error)")
+        exit(1)
+    }
+}

@@ -1,14 +1,35 @@
 
-sensor/livingroom/data
-sensor/office/data
-sensor/livingroom/fridge/data
+传感器数据
+sensor/dht22/1/data
+sensor/dht22/2/data
+sensor/dht22/10/data
 
-note/home
+device id:
 
+`specific`          : 0
+`livingroom`        : 1
+`fridge`            : 2
+`ffice`             : 10
 
-note/home/${user_id}/inbox
+笔记
+note/0/home
+note/${user_id}/home/
+
+note id:
+
+`notification`      : 0
+`user_id`           : 2
+
+信息
+message/home
+
+`sensor/dht22/+/data`: 订阅所有的dht22传感器数据
+`note/+/home`: 订阅所有的hom笔记
+
+note/${user_id}/home/
 chat/user/${user_id}/inbox
 chat/group/${group_id}/inbox
+chat/notification
 
 
 home/sensor/livingroom/data          # 完整JSON数据
@@ -37,11 +58,50 @@ home/screen/livingroom/stata
 
 `home/sensor/+/temperature`
 
+加号 (“+” U+002B) 是用于单个主题层级匹配的通配符。在使用单层通配符时，单层通配符必须占据整个层级，例如：
+
+```
++ 有效
+sensor/+ 有效
+sensor/+/temperature 有效
+sensor+ 无效（没有占据整个层级）
+
+```
+
+如果客户端订阅了主题 sensor/+/temperature，将会收到以下主题的消息：
+
+```
+sensor/1/temperature
+sensor/2/temperature
+...
+sensor/n/temperature
+```
+
+但是不会匹配以下主题：
+
+```
+sensor/temperature
+sensor/bedroom/1/temperature
+```
+
 ### 多层通配符
 
 井字符号（“#” U+0023）是用于匹配主题中任意层级的通配符。多层通配符表示它的父级和任意数量的子层级，在使用多层通配符时，它必须占据整个层级并且必须是主题的最后一个字符，例如：
 
-`home/sensor/#`
+```
+# 有效，匹配所有主题
+sensor/# 有效
+sensor/bedroom# 无效（没有占据整个层级）
+sensor/#/temperature 无效（不是主题最后一个字符）
+```
+
+如果客户端订阅主题 senser/#，它将会收到以下主题的消息：
+
+```
+sensor
+sensor/temperature
+sensor/1/temperature
+```
 
 ### 以 $ 开头的主题
 

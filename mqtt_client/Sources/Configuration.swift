@@ -15,6 +15,11 @@ enum Configuration {
     static let mqttPassword = ProcessInfo.processInfo.environment["MQTT_PASSWORD"] ??  "hut123456"
     static let mqttClientId = ProcessInfo.processInfo.environment["MQTT_CLIENT_ID"] ?? "swift-mqtt-client-\(UUID().uuidString)"
     static let mqttTopic = ProcessInfo.processInfo.environment["MQTT_TOPIC"] ?? "test/data"
+    // 支持多个主题，用逗号分隔，例如: "test/data,sensor/temperature,device/status"
+    static let mqttTopics: [String] = {
+        let topicsString = ProcessInfo.processInfo.environment["MQTT_TOPICS"] ?? mqttTopic
+        return topicsString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    }()
     static let mqttUseSSL = ProcessInfo.processInfo.environment["MQTT_USE_SSL"] == "true"
     static let mqttKeepAlive = Int(ProcessInfo.processInfo.environment["MQTT_KEEP_ALIVE"] ?? "60") ?? 60
     
@@ -32,7 +37,7 @@ enum Configuration {
         print("MQTT Username: \(mqttUsername.isEmpty ? "(未设置)" : "***")")
         print("MQTT Password: \(mqttPassword.isEmpty ? "(未设置)" : "***")")
         print("MQTT Use SSL: \(mqttUseSSL)")
-        print("MQTT Topic: \(mqttTopic)")
+        print("MQTT Topics: \(mqttTopics.joined(separator: ", "))")
         print("MQTT Client ID: \(mqttClientId)")
         print("Database: \(dbUsername)@\(dbHost):\(dbPort)/\(dbDatabase)")
         print("================")

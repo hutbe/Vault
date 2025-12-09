@@ -83,13 +83,19 @@ class MQTTServerApp {
         connectFuture.whenSuccess { _ in
             self.logger.info("已连接到 MQTT Broker: \(Configuration.mqttHost):\(Configuration.mqttPort)")
             
-            // 订阅主题
-            let subscribeFuture = client.subscribe(to: [
-                MQTTSubscribeInfo(topicFilter: Configuration.mqttTopic, qos: .atLeastOnce)
-            ])
+            // 订阅多个主题
+            var subscriptions = [MQTTSubscribeInfo(topicFilter: Configuration.mqttTopic, qos: .atLeastOnce)]
+            if Configuration.mqttTopics.count > 0 {
+                // 订阅多个主题
+                subscriptions = Configuration.mqttTopics.map { topic in
+                    MQTTSubscribeInfo(topicFilter: topic, qos: .atLeastOnce)
+                }
+            }
+            
+            let subscribeFuture = client.subscribe(to: subscriptions)
             
             subscribeFuture.whenSuccess { suback in
-                self.logger.info("已订阅主题: \(Configuration.mqttTopic)")
+                self.logger.info("已订阅主题: \(Configuration.mqttTopics.joined(separator: ", "))")
                 self.logger.debug("订阅响应: \(suback)")
             }
             
@@ -140,9 +146,10 @@ class MQTTServerApp {
     }
     
     deinit {
-        try? mqttClient?.disconnect().wait()
-        try? databaseService.close().wait()
-        try? eventLoopGroup.syncShutdownGracefully()
+#warning("TODO: 资源释放待完善")
+//        try? mqttClient?.disconnect().wait()
+//        try? databaseService.close().wait()
+//        try? eventLoopGroup.syncShutdownGracefully()
     }
 }
 
