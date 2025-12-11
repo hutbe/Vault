@@ -37,8 +37,8 @@ func iso8601ToMySQLTimestamp3(_ iso: String) -> String? {
         for fmt in fallbackFormats {
             df.dateFormat = fmt
             // 假设没有时区的字符串为设备本地时间或直接当作 UTC（你需要根据设备协议选择）
-            // df.timeZone = TimeZone(secondsFromGMT: 0) // 这里假设 UTC；若设备为本地时间可改为本地时区
-            df.timeZone = TimeZone(identifier: "Asia/Shanghai")
+            df.timeZone = TimeZone(secondsFromGMT: 0) // 这里假设 UTC；若设备为本地时间可改为本地时区
+            // df.timeZone = TimeZone(identifier: "Asia/Shanghai")
             if let d = df.date(from: iso) {
                 date = d
                 break
@@ -87,8 +87,8 @@ func iso8601ToMySQLTimestampNoMillis(_ iso: String) -> String? {
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
         // 这里把无时区字符串当作 UTC 处理；如果设备文档说明为本地时间，请改为相应时区
-        // df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        // df.timeZone = TimeZone(identifier: "Asia/Shanghai")
         for fmt in fallbackFormats {
             df.dateFormat = fmt
             if let d = df.date(from: iso) {
@@ -139,8 +139,8 @@ func iso8601ToMySQLTimestampNoMillisToDate(_ iso: String) -> Date? {
         let df = DateFormatter()
         df.locale = Locale(identifier: "en_US_POSIX")
         // 这里把无时区字符串当作 UTC 处理；如果设备文档说明为本地时间，请改为相应时区
-        // df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.timeZone = TimeZone(identifier: "Asia/Shanghai")
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        // df.timeZone = TimeZone(identifier: "Asia/Shanghai")
         for fmt in fallbackFormats {
             df.dateFormat = fmt
             if let d = df.date(from: iso) {

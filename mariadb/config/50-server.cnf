@@ -1,1 +1,3 @@
-bind-address = 0.0.0.0
+# 在 MySQL/MariaDB 的配置文件中，每个配置选项都必须位于一个用方括号 []
+[mysqld]
+# bind-address = 0.0.0.0  # 这是行尾注释
