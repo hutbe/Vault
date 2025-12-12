@@ -3,7 +3,10 @@ set -e
 
 IMAGE_NAME="stoull/mqtt_client"
 TAG="latest"
-CACHE_DIR="~/buildx-cache/mqtt_client"
+CACHE_DIR="${HOME}/buildx-cache/mqtt_client"
+
+# 确保缓存目录存在
+mkdir -p "$CACHE_DIR"
 
 echo "Building multi-arch image for $IMAGE_NAME:$TAG"
 
@@ -20,14 +23,9 @@ docker buildx build \
 # 方法B：同时构建本地可用的arm64版本
 echo "Building local arm64 version..."
 docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -t $IMAGE_NAME:$TAG \
-  # 缓存配置
-  --cache-to type=local,dest=$CACHE_DIR,mode=max \
-  --cache-from type=local,src=$CACHE_DIR \
-  --cache-from type=registry,ref=$IMAGE_NAME:buildcache \
-  # 输出配置
-  --push .
+  --platform linux/arm64 \
+  -t $IMAGE_NAME:$TAG-arm64 \
+  --load .
 
 echo "Done!"
 echo "Multi-arch image pushed to Docker Hub"

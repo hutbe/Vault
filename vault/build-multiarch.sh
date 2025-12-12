@@ -3,7 +3,10 @@ set -e
 
 IMAGE_NAME="stoull/vault-app"
 TAG="latest"
-CACHE_DIR="~/buildx-cache/vault-app"
+CACHE_DIR="${HOME}/buildx-cache/vault-app"
+
+# 确保缓存目录存在
+mkdir -p "$CACHE_DIR"
 
 echo "Building multi-arch image for $IMAGE_NAME:$TAG"
 
@@ -15,11 +18,9 @@ echo "Building and pushing multi-arch image..."
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   -t $IMAGE_NAME:$TAG \
-  # 缓存配置
   --cache-to type=local,dest=$CACHE_DIR,mode=max \
   --cache-from type=local,src=$CACHE_DIR \
   --cache-from type=registry,ref=$IMAGE_NAME:buildcache \
-  # 输出配置
   --push .
 
 # 方法B：同时构建本地可用的arm64版本
