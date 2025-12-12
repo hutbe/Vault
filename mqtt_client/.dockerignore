@@ -8,6 +8,9 @@ xcuserdata/
 *.xcodeproj
 *.xcworkspace
 
+# sensitive data
+*.env
+
 # macOS
 .DS_Store
 .AppleDouble
