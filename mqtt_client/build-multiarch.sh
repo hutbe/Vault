@@ -22,10 +22,10 @@ docker buildx build \
 
 # 方法B：同时构建本地可用的arm64版本
 echo "Building local arm64 version..."
-docker buildx build \
-  --platform linux/arm64 \
-  -t $IMAGE_NAME:$TAG-arm64 \
-  --load .
+#docker buildx build \
+#  --platform linux/arm64 \
+#  -t $IMAGE_NAME:$TAG-arm64 \
+#  --load .
 
 echo "Done!"
 echo "Multi-arch image pushed to Docker Hub"

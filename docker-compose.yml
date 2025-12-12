@@ -2,7 +2,8 @@
 services:
   app:
     # build: ./vault
-    image: stoull/vault-app:arm64
+    image: stoull/vault-app:latest
+    pull_policy: if_not_present
     container_name: vault-app
     restart: unless-stopped
     ports:
@@ -19,7 +20,7 @@ services:
 
   mqtt_client:
     # build: ./mqtt_client
-    image: stoull/mqtt_client:arm64
+    image: stoull/mqtt_client:latest-arm64
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never
     container_name: mqtt_client
     restart: unless-stopped
@@ -66,7 +67,8 @@ services:
   # Nginx代理服务器
   nginx:
     # build: ./nginx
-    image: stoull/vault-nginx:arm64
+    image: stoull/vault-nginx:latest
+    pull_policy: if_not_present
     container_name: nginx
     restart: unless-stopped
     ports:
@@ -95,6 +97,7 @@ services:
 
   mosquitto:
     image: eclipse-mosquitto:2.0.22-openssl
+    pull_policy: if_not_present
     container_name: mosquitto
     restart: unless-stopped
     env_file:
