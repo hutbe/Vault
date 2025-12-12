@@ -2,6 +2,11 @@
 
 FROM nginx:1.28.0-alpine-slim
 
+LABEL maintainer="Hut <strongwindcarrywater@gmail.com>" \
+      author="Hut" \
+      version="1.0" \
+      description="My custom image based on nginx"
+
 # 安装 openssl 工具
 RUN apk update && apk add --no-cache openssl
 

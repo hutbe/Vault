@@ -5,7 +5,7 @@
 # ============================================
 # FROM swift:5.9 as builder
 # swift:6.2-bookworm-slim as builder
-FROM swift:6.2-bookworm as builder
+FROM swift:6.2-bookworm AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -28,6 +28,11 @@ RUN swift build -c release --static-swift-stdlib
 # FROM ubuntu:22.04
 # FROM alpine:latest
 FROM debian:bookworm
+
+LABEL maintainer="Hut <strongwindcarrywater@gmail.com>" \
+      author="Hut" \
+      version="1.0" \
+      description="My custom image with Swift"
 
 # 安装运行时依赖
 # RUN apt-get update && apt-get install -y \

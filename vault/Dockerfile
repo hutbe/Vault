@@ -1,5 +1,10 @@
 FROM python:3.13-slim
 
+LABEL maintainer="Hut <strongwindcarrywater@gmail.com>" \
+      author="Hut" \
+      version="1.0" \
+      description="My custom image"
+
 WORKDIR /app
 
 # 创建必要的目录
