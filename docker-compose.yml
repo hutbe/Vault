@@ -20,7 +20,7 @@ services:
 
   mqtt_client:
     # build: ./mqtt_client
-    image: stoull/mqtt_client:latest-arm64
+    image: stoull/mqtt_client:latest
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never
     container_name: mqtt_client
     restart: unless-stopped
