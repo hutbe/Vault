@@ -102,6 +102,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - MOSQUITTO_USERNAME=admin
+      - MOSQUITTO_PASSWORD=${MOSQUITTO_PASSWORD}  # 从.env文件读取
     ports:
       - "${MQTT_PORT:-1883}:1883"     # MQTT
       - "${MQTTS_PORT:-8883}:8883"    # MQTT over SSL
