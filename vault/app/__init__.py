@@ -26,10 +26,11 @@ def load_env():
     app_env = os.getenv('APP_ENV')
     logger.info(f"===== 环境变量 APP_ENV : {app_env}")
 
+
     # 2) 环境专用
-    app_env = os.getenv("APP_ENV", "development").lower()
-    logger.info(f"===== 加载.evn变量文件 : .env.{app_env}")
-    load_dotenv(base_dir / f".env.{app_env}", override=True)
+    # app_env = os.getenv("APP_ENV", "development").lower()
+    # logger.info(f"===== 加载.evn变量文件 : .env.{app_env}")
+    # load_dotenv(base_dir / f".env.{app_env}", override=True)
     # 3) 个人本地覆盖（不要提交到版本库）
     # load_dotenv(base_dir / ".env.local_dev", override=True)
 

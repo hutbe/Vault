@@ -40,10 +40,10 @@ class BaseConfig:
 
     # 目录相关
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    UPLOAD_FOLDER = os.getenv("SHARED_DATA_PATH", "./shared_data/uploads")
+    UPLOAD_FOLDER = "/app/shared_data"
 
     # 上传配置
-    IMAGE_UPLOAD_FOLDER = os.path.join(BASE_DIR, f'{UPLOAD_FOLDER}/image')
+    IMAGE_UPLOAD_FOLDER = os.path.join(BASE_DIR, 'shared_data/image')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 限制上传文件大小为 16MB
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}
 
