@@ -48,7 +48,7 @@ services:
       # 1. environment 中直接定义的变量
       # 2. env_file 中加载的变量
     environment:
-      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-admin} # 如果变量不存在，使用默认值
+      DB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-admin} # 如果变量不存在，使用默认值
       DB_DATABASE: ${DB_DATABASE:-mydb}
       DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-admin}
