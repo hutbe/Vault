@@ -45,7 +45,8 @@ nginx/certs/
 nginx/log/
 
 # mqtt mosquitto 数据
-/mosquitto/config/
+/mosquitto/config/passwd
+/mosquitto/config/passwd.backup.oMeafB
 /mosquitto/certs/
 /mosquitto/data/
 /mosquitto/log/
