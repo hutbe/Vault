@@ -7,8 +7,10 @@ LABEL maintainer="Hut <strongwindcarrywater@gmail.com>" \
       version="1.0" \
       description="My custom image based on nginx"
 
-# 安装 openssl 工具
-RUN apk update && apk add --no-cache openssl
+# 安装 openssl curl 等工具
+RUN apk update && apk add --no-cache \
+    openssl \
+    curl
 
 # 创建必要的目录
 RUN mkdir -p /usr/share/nginx/www \

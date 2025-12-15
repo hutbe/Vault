@@ -1,7 +1,21 @@
 server {
-    listen ${NGINX_VAULT_PORT};
-	listen [::]:${NGINX_VAULT_PORT};
-    server_name ${NGINX_HOST};
+    listen ${NGINX_VAULT_PORT} ssl;
+	listen [::]:${NGINX_VAULT_PORT} ssl;
+    server_name ${NGINX_HOST} www.${NGINX_HOST} localhost;
+
+    # 证书路径（由脚本生成或挂载）
+    ssl_certificate     /etc/nginx/certs/server.pem;
+    ssl_certificate_key /etc/nginx/certs/server.key;
+
+    # TLS 基础设置
+    ssl_session_timeout 1h;                 #缓存有效期
+    ssl_session_cache   shared:SSL:10m;
+    ssl_protocols       TLSv1.2 TLSv1.3;    #安全链接可选的加密协议
+    ssl_ciphers         HIGH:!aNULL:!MD5;   #加密算法
+    ssl_prefer_server_ciphers on;           #优先使用服务器端的加密算法
+
+    # 安全头片段
+    include /etc/nginx/snippets/security.conf;
 
     location / {
         proxy_pass http://flask_app;
