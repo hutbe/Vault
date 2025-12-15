@@ -69,7 +69,21 @@ def create_app(config_class=None) -> Flask:
     # 配置 跨域资源共享（Cross-origin resource sharing)
     # 仅允许指定前端源，生产环境不要用 '*'
     CORS(flask_app,
-         resources={r"*": {"origins": ["http://localhost:3000", "https://ahut.site:8081", "http://macmini.local:8010"]}},
+         resources={r"*": {"origins": ["http://ahut.site",
+                                        "http://ahut.site:8000",
+                                        "http://ahut.site:8010",
+                                        "http://ahut.site:8020",
+                                        "http://ahut.site:9000",
+                                        "https://ahut.site",
+                                        "https://ahut.site:8000",
+                                        "https://ahut.site:8010",
+                                        "https://ahut.site:8020",
+                                        "https://ahut.site:9000",
+                                        "http://localhost",
+                                        "http://localhost:8000",
+                                        "http://localhost:8010",
+                                        "http://localhost:8020",
+                                        "http://localhost:9000"]}},
          supports_credentials=True,  # 如果前端需要带 cookie/token
          methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
          allow_headers=["Content-Type", "Authorization"],
