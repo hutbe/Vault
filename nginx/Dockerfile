@@ -17,6 +17,7 @@ RUN mkdir -p /usr/share/nginx/www \
              /var/log/nginx \
              /etc/nginx/conf.d \
              /etc/nginx/certs \
+             /etc/nginx/snippets \
              /usr/share/nginx/shared_data/uploads/images
 
 # 声明卷挂载点，docker-compose 可以实际挂载这些卷
@@ -24,12 +25,13 @@ VOLUME ["/usr/share/nginx/www"]
 VOLUME ["/var/log/nginx"]
 VOLUME ["/etc/nginx/conf.d"]
 VOLUME ["/etc/nginx/certs"]
+VOLUME ["/etc/nginx/snippets"]
 VOLUME ["/usr/share/nginx/shared_data"]
 
 # 复制配置文件
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY conf.d/ /etc/nginx/conf.d/
-COPY snippets/ /etc/nginx/snippets/
+# COPY snippets/ /etc/nginx/snippets/
 COPY templates/ /etc/nginx/templates/
 COPY docker-entrypoint.d/ /docker-entrypoint.d/
 
