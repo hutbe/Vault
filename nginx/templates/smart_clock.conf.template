@@ -23,6 +23,8 @@ server {
     index index.html index.htm;
 
     location / {
+        # CORS 配置
+        include /etc/nginx/snippets/cors_headers.conf;
         try_files $uri $uri/ =404;
     }
 

@@ -11,6 +11,7 @@
 - 2. UID 和 GID 是 Linux/Unix 系统中用户和组身份的核心标识符。
     * docker与系统UID/GID的关系
 - 3. 配置 跨域资源共享（Cross-origin resource sharing)
+- 4. Strict-Transport-Security header
 
 在使用Docker部署MariaDB时，通过挂载这三个文件夹是业界最佳实践，可以实现数据持久化、配置自定义和初始化自动化。下面详细解释这三个文件夹的作用：
 

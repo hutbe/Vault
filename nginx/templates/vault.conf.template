@@ -18,6 +18,9 @@ server {
     include /etc/nginx/snippets/security.conf;
 
     location / {
+        # CORS 配置
+        include /etc/nginx/snippets/cors_headers.conf;
+
         proxy_pass http://flask_app;
 
         # 代理头信息

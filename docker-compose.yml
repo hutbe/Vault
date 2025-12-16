@@ -66,8 +66,8 @@ services:
 
   # Nginx代理服务器
   nginx:
-    # build: ./nginx
-    image: stoull/vault-nginx:latest
+    build: ./nginx
+    # image: stoull/vault-nginx:latest
     pull_policy: if_not_present
     container_name: nginx
     restart: unless-stopped
