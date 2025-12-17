@@ -77,7 +77,7 @@ def create_app(config_class=None) -> Flask:
                                         "http://localhost:*"]}},
          supports_credentials=True,  # 如果前端需要带 cookie/token
          methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Requested-With, X-Request-ID"],
          expose_headers=["X-Total-Count"],  # 可选：让前端可读这些自定义响应头
          max_age=86400)  # 预检结果缓存
 
