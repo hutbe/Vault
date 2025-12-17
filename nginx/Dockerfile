@@ -16,6 +16,7 @@ RUN apk update && apk add --no-cache \
 RUN mkdir -p /usr/share/nginx/www \
              /var/log/nginx \
              /etc/nginx/conf.d \
+             /etc/nginx/templates \
              /etc/nginx/certs \
              /etc/nginx/snippets \
              /usr/share/nginx/shared_data/uploads/images
@@ -24,6 +25,7 @@ RUN mkdir -p /usr/share/nginx/www \
 VOLUME ["/usr/share/nginx/www"]
 VOLUME ["/var/log/nginx"]
 VOLUME ["/etc/nginx/conf.d"]
+VOLUME ["/etc/nginx/templates"]
 VOLUME ["/etc/nginx/certs"]
 VOLUME ["/etc/nginx/snippets"]
 VOLUME ["/usr/share/nginx/shared_data"]
@@ -32,7 +34,7 @@ VOLUME ["/usr/share/nginx/shared_data"]
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY conf.d/ /etc/nginx/conf.d/
 # COPY snippets/ /etc/nginx/snippets/
-COPY templates/ /etc/nginx/templates/
+# COPY templates/ /etc/nginx/templates/
 COPY docker-entrypoint.d/ /docker-entrypoint.d/
 
 # 复制SSL证书（如果有的话）
