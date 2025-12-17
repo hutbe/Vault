@@ -70,23 +70,14 @@ def create_app(config_class=None) -> Flask:
     # 仅允许指定前端源，生产环境不要用 '*'
     CORS(flask_app,
          resources={r"*": {"origins": ["http://ahut.site",
-                                        "http://ahut.site:8000",
-                                        "http://ahut.site:8010",
-                                        "http://ahut.site:8020",
-                                        "http://ahut.site:9000",
+                                        "http://ahut.site:*",
                                         "https://ahut.site",
-                                        "https://ahut.site:8000",
-                                        "https://ahut.site:8010",
-                                        "https://ahut.site:8020",
-                                        "https://ahut.site:9000",
+                                        "https://ahut.site:*",
                                         "http://localhost",
-                                        "http://localhost:8000",
-                                        "http://localhost:8010",
-                                        "http://localhost:8020",
-                                        "http://localhost:9000"]}},
+                                        "http://localhost:*"]}},
          supports_credentials=True,  # 如果前端需要带 cookie/token
          methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-         allow_headers=["Content-Type", "Authorization"],
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
          expose_headers=["X-Total-Count"],  # 可选：让前端可读这些自定义响应头
          max_age=86400)  # 预检结果缓存
 
