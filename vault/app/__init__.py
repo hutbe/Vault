@@ -1,4 +1,5 @@
 import os
+import re
 from importlib import import_module
 from pathlib import Path
 from flask import Flask
@@ -69,12 +70,7 @@ def create_app(config_class=None) -> Flask:
     # 配置 跨域资源共享（Cross-origin resource sharing)
     # 仅允许指定前端源，生产环境不要用 '*'
     CORS(flask_app,
-         resources={r"*": {"origins": ["http://ahut.site",
-                                        "http://ahut.site:*",
-                                        "https://ahut.site",
-                                        "https://ahut.site:*",
-                                        "http://localhost",
-                                        "http://localhost:*"]}},
+         resources={r"*": {"origins": re.compile(r"^https?://(ahut\.site|localhost)(:\d+)?$")}},
          supports_credentials=True,  # 如果前端需要带 cookie/token
          methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
          allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Requested-With, X-Request-ID"],
