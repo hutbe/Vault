@@ -5,6 +5,8 @@ LABEL maintainer="Hut <strongwindcarrywater@gmail.com>" \
       version="1.0" \
       description="My custom image"
 
+RUN pip install --upgrade pip
+
 WORKDIR /app
 
 # 创建必要的目录
@@ -24,7 +26,7 @@ VOLUME ["/app/shared_data"]
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
