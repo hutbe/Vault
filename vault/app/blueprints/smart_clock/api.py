@@ -183,14 +183,16 @@ def read_home_pod_records():
 def read_temp_humidity():
     with db_manager.session_scope() as session:
         try:
-            # 取最新 10 条记录（按 id 倒序）
+            # 取最新 1 条记录（按 id 倒序）
             records = session.query(HomeClimate) \
                 .order_by(HomeClimate.id.desc()) \
                 .limit(1) \
                 .all()
         except Exception as e:
             return ApiResponse.error(message=f"数据库错误: {e}")
-    return ApiResponse.success(data=records)
+    # 将 HomeClimate 对象列表转换为字典列表
+    data = [record.to_dict() for record in records]
+    return ApiResponse.success(data=data)
 
 @clock_bp.route('/temperature-humidity/history', methods=['POST', 'GET'])
 def read_temp_humidity_history():
@@ -220,18 +222,30 @@ def read_fridge_records():
         return ApiResponse.success(data=result)
     else:
         return ApiResponse.error(message=f"数据库错误")
-#
-# @clock_bp.route('/surroundings/record', methods=['POST'])
-# def insert_SurroundingRecord():
-#     params = getRequestParamters(request)
-#     result_dic = {}
-#     if params is not None:
-#         if 'record' in params:
-#             record_para = params['record']
-#             print(f"insertASurroundingRecord record_para: {record_para}")
-#             result_dic = insertARecord(record_para)
-#         else:
-#             result_dic = {'message': 'A record must have a record parameter'}
-#     response = response_manager.json_response(result_dic)
-#     response.headers.add('Access-Control-Allow-Origin', '*')
-#     return response
+
+@clock_bp.route('/home_climate/record', methods=['POST'])
+def insert_home_climate_record():
+    params = get_param('params', None, type_=str)
+    if params:
+        if 'record' in params:
+            # 定义字段名列表（与SQL语句顺序一致）
+            field_names = [
+                'location', 'temperature', 'humidity', 'cup_temp', 'cpu_used_rate',
+                'sys_uptime', 'sys_runtime', 'weather', 'weather_code', 'weather_des',
+                'weather_icon', 'outdoors_temp', 'outdoors_feels_like', 'outdoors_temp_min',
+                'outdoors_temp_max', 'outdoors_pressure', 'outdoors_humidity'
+            ]
+            with db_manager.session_scope() as session:
+                try:
+                    # 将元组参数转换为字典
+                    params_dict = dict(zip(field_names, params))
+                    # 创建模型实例
+                    home_climate = HomeClimate(**params_dict)
+                    session.add(home_climate)
+                    # session_scope上下文管理器会自动提交
+                    return ApiResponse.success(data={}, message="successfully")
+                except Exception as e:
+                    return ApiResponse.error(message=f"数据库错误: {e}")
+    return ApiResponse.error(message=f"参数错误")
+
+
