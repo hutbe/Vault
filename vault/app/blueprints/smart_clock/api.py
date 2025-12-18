@@ -181,18 +181,31 @@ def read_home_pod_records():
 # 获取温湿度
 @clock_bp.route('/temperature-humidity', methods=['POST', 'GET'])
 def read_temp_humidity():
+    # with db_manager.session_scope() as session:
+    #     try:
+    #         # 取最新 1 条记录（按 id 倒序）
+    #         records = session.query(HomeClimate) \
+    #             .order_by(HomeClimate.id.desc()) \
+    #             .limit(1) \
+    #             .all()
+    #     except Exception as e:
+    #         return ApiResponse.error(message=f"数据库错误: {e}")
+    # # 将 HomeClimate 对象列表转换为字典列表
+    # data = [record.to_dict() for record in records]
+    # return ApiResponse.success(data=data)
     with db_manager.session_scope() as session:
         try:
             # 取最新 1 条记录（按 id 倒序）
-            records = session.query(HomeClimate) \
+            record = session.query(HomeClimate) \
                 .order_by(HomeClimate.id.desc()) \
-                .limit(1) \
-                .all()
+                .first()
         except Exception as e:
             return ApiResponse.error(message=f"数据库错误: {e}")
-    # 将 HomeClimate 对象列表转换为字典列表
-    data = [record.to_dict() for record in records]
-    return ApiResponse.success(data=data)
+
+    if record:
+        return ApiResponse.success(data=record.to_dict())
+    else:
+        return ApiResponse.success(data={})
 
 @clock_bp.route('/temperature-humidity/history', methods=['POST', 'GET'])
 def read_temp_humidity_history():
