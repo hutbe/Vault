@@ -225,27 +225,43 @@ def read_fridge_records():
 
 @clock_bp.route('/home_climate/record', methods=['POST'])
 def insert_home_climate_record():
-    params = get_param('params', None, type_=str)
-    if params:
-        if 'record' in params:
-            # 定义字段名列表（与SQL语句顺序一致）
-            field_names = [
-                'location', 'temperature', 'humidity', 'cup_temp', 'cpu_used_rate',
-                'sys_uptime', 'sys_runtime', 'weather', 'weather_code', 'weather_des',
-                'weather_icon', 'outdoors_temp', 'outdoors_feels_like', 'outdoors_temp_min',
-                'outdoors_temp_max', 'outdoors_pressure', 'outdoors_humidity'
-            ]
-            with db_manager.session_scope() as session:
-                try:
-                    # 将元组参数转换为字典
-                    params_dict = dict(zip(field_names, params))
-                    # 创建模型实例
-                    home_climate = HomeClimate(**params_dict)
-                    session.add(home_climate)
-                    # session_scope上下文管理器会自动提交
-                    return ApiResponse.success(data={}, message="successfully")
-                except Exception as e:
-                    return ApiResponse.error(message=f"数据库错误: {e}")
+    record = get_param('record', None, type_=list)
+    if record:
+        # 定义字段名列表（与SQL语句顺序一致）
+        # field_names = [
+        #     'location', 'temperature', 'humidity', 'cup_temp', 'cpu_used_rate',
+        #     'sys_uptime', 'sys_runtime', 'weather', 'weather_code', 'weather_des',
+        #     'weather_icon', 'outdoors_temp', 'outdoors_feels_like', 'outdoors_temp_min',
+        #     'outdoors_temp_max', 'outdoors_pressure', 'outdoors_humidity'
+        # ]
+        with db_manager.session_scope() as session:
+            try:
+                # 定义字段名列表
+                home_climate = HomeClimate(
+                    location=record[0],
+                    temperature=record[1],
+                    humidity=record[2],
+                    cup_temp=record[3],
+                    cpu_used_rate=record[4],
+                    sys_uptime=record[5],
+                    sys_runtime=record[6],
+                    weather=record[7],
+                    weather_code=record[8],
+                    weather_des=record[9],
+                    weather_icon=record[10],
+                    outdoors_temp=record[11],
+                    outdoors_feels_like=record[12],
+                    outdoors_temp_min=record[13],
+                    outdoors_temp_max=record[14],
+                    outdoors_pressure=record[15],
+                    outdoors_humidity=record[16]
+                    # create_date 有默认值，不需要手动设置
+                )
+                session.add(home_climate)
+                # session_scope上下文管理器会自动提交
+                return ApiResponse.success(data={}, message="successfully")
+            except Exception as e:
+                return ApiResponse.error(message=f"数据库错误: {e}")
     return ApiResponse.error(message=f"参数错误")
 
 
