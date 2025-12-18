@@ -1,7 +1,8 @@
 #图片服务器服务
 server {
     listen ${NGINX_VAULT_SMART_CLOCK_PORT} ssl;
-    server_name ${NGINX_HOST} ssl;
+    listen [::]:${NGINX_VAULT_SMART_CLOCK_PORT} ssl;
+    server_name ${NGINX_HOST} default_server;
 
     # 证书路径（由脚本生成或挂载）
     ssl_certificate     ${SSL_CERT_PATH};

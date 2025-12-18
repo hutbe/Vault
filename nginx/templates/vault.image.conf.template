@@ -2,7 +2,7 @@
 server {
     listen ${NGINX_VAULT_IMAGE_PORT} ssl;
     listen [::]:${NGINX_VAULT_IMAGE_PORT} ssl;
-    server_name ${NGINX_HOST} www.${NGINX_HOST} localhost;
+    server_name ${NGINX_HOST} www.${NGINX_HOST} default_server;
 
     # 证书路径（由脚本生成或挂载）
     ssl_certificate     /etc/nginx/certs/server.pem;

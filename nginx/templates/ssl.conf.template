@@ -1,7 +1,7 @@
 server {
     listen 443 ssl;
 	listen [::]:443 ssl;
-    server_name ${NGINX_HOST} www.${NGINX_HOST} localhost;
+    server_name ${NGINX_HOST} www.${NGINX_HOST} default_server;
 
     # 证书路径（由脚本生成或挂载）
     ssl_certificate     ${SSL_CERT_PATH};
