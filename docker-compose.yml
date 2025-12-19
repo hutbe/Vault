@@ -1,8 +1,8 @@
 
 services:
   app:
-    # build: ./vault
-    image: stoull/vault-app:latest
+    build: ./vault
+    # image: stoull/vault-app:latest
     pull_policy: if_not_present
     container_name: vault-app
     restart: unless-stopped
@@ -12,6 +12,8 @@ services:
       - .env
     volumes:
       - ${SHARED_DATA_PATH}:/app/shared_data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     depends_on:
       - mariadb
       - nginx
@@ -28,10 +30,13 @@ services:
       - "8020:8020"
     env_file:
       - ./mqtt_client/.env
-    networks:
-      - app-network
     volumes:
       - ./mqtt_client/logs:/app/logs
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - app-network
+
 
   mariadb:
     image: mariadb:latest
@@ -57,6 +62,8 @@ services:
       - ./mariadb/data:/var/lib/mysql
       - ./mariadb/config:/etc/mysql/conf.d
       - ./mariadb/initdb:/docker-entrypoint-initdb.d
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - app-network
     command:
@@ -87,6 +94,8 @@ services:
       - ./nginx/snippets:/etc/nginx/snippets
       - ${SHARED_DATA_PATH}:/usr/share/nginx/shared_data:ro # read-only（只读）
       - nginx-logs:/var/log/nginx	# 日志卷 - Docker 自动管理
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
 #    depends_on:
 #      - flask-app
     networks:
@@ -117,6 +126,8 @@ services:
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
       - ./mosquitto/certs:/mosquitto/certs
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - app-network
 

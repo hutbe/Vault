@@ -33,6 +33,13 @@ def read_home_climate_last_records_with_minutes(minutes):
             createDates = [record.create_date.strftime("%H:%M") for record in records]
             outdoors_temp = [record.outdoors_temp for record in records]
 
+            temperatures.reverse()
+            humidities.reverse()
+            cup_temps.reverse()
+            cpu_used_rates.reverse()
+            createDates.reverse()
+            outdoors_temp.reverse()
+
             return {
                 "labels": createDates,
                 "temp": temperatures,
