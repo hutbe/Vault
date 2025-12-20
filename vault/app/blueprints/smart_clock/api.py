@@ -199,18 +199,18 @@ def read_temp_humidity():
             record = session.query(HomeClimate) \
                 .order_by(HomeClimate.id.desc()) \
                 .first()
+            if record:
+                return ApiResponse.success(data=record.to_dict())
+            else:
+                return ApiResponse.success(data={})
         except Exception as e:
             return ApiResponse.error(message=f"数据库错误: {e}")
 
-    if record:
-        return ApiResponse.success(data=record.to_dict())
-    else:
-        return ApiResponse.success(data={})
 
 @clock_bp.route('/temperature-humidity/history', methods=['POST', 'GET'])
 def read_temp_humidity_history():
     try:
-        result = read_home_climate_last_records_with_minutes(480)
+        result = read_home_climate_last_records_with_minutes(1440)
         return ApiResponse.success(data=result)
     except Exception as e:
         return ApiResponse.error(message=f"数据库错误: {e}")
