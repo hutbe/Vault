@@ -30,6 +30,12 @@ def bad_request__error(e):
 def internal_server_error(e):
     raise ValidationException(message="inner error", error_code=ErrorCodes.MISSING_PARAMETER)
 
+@clock_bp.route('/initialized_db', methods=['POST'])
+def initialized_db():
+    init_db()
+    add_image_types()
+    return ApiResponse.success("All Done!")
+
 @clock_bp.route('/screen-action/<int:count>', methods=['GET'])
 def read_screen_action_api(count):
     count = get_param('count')

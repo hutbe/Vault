@@ -46,8 +46,8 @@ def inquiry_image_type(type_id, type_name):
 def api_health():
     return ApiResponse.success(message="You got me, I'm Image Server, And I'm health")
 
-@image_bp.route('/init_image_db', methods=['POST'])
-def initialized_image_db():
+@image_bp.route('/initialized_db', methods=['POST'])
+def initialized_db():
     init_db()
     add_image_types()
     return ApiResponse.success("All Done!")

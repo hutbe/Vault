@@ -1,10 +1,10 @@
 from sqlalchemy import create_engine, Column, Integer,BigInteger, Float, String, DateTime, ForeignKey, Text, Index
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime
 
+# 创建基类
 Base = declarative_base()
-
 
 class SunriseSunset(Base):
     """城市日出日落信息表 - 只由实时天气数据接口填充"""
@@ -55,25 +55,24 @@ class City(Base):
         back_populates='city',
         lazy='noload', # 'selectin'用于大数据集查询 dynamic 适合偶尔需要查询, noload 访问时返回空列表 []，不会触发数据库查询 需要时可以手动查询
         order_by='desc(SunriseSunset.dt)',  # 按时间倒序
-        cascade='all, delete-orphan',  # 删除城市时级联删除记录
-        comment='城市的历史日出日落记录'
+        cascade='all, delete-orphan'  # 删除城市时级联删除记录
     )
 
     # 关系：一个城市有多条天气预报
     forecasts = relationship('WeatherForecast', back_populates='city', cascade='all, delete-orphan')
     # 关系：一个城市有多条实时天气记录
-    weather_realtime = relationship('CurrentWeather', back_populates='city', cascade='all, delete-orphan')
+    weather_realtime = relationship('WeatherRealtime', back_populates='city', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<City(id={self.id}, name='{self.name}', country='{self.country}')>"
 
 
-class RealtimeWeather(Base):
+class WeatherRealtime(Base):
     """实时天气数据表"""
     __tablename__ = 'weather_realtime'
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
-    city_id = Column(Integer, ForeignKey('cities.id', ondelete='CASCADE'),
+    city_id = Column(Integer, ForeignKey('weather_cities.id', ondelete='CASCADE'),
                      nullable=False, index=True, comment='城市ID外键')
 
     # 时间信息
@@ -119,13 +118,14 @@ class RealtimeWeather(Base):
     timezone = Column(Integer, comment='时区偏移(秒)')
     cod = Column(Integer, comment='响应代码')
 
+    weather_type_id = Column(Integer, ForeignKey('weather_types.id'), comment='天气状况ID外键')
+
     # 关系
     city = relationship('City', back_populates='weather_realtime')
-    weather_conditions = relationship('RealtimeWeatherCondition', back_populates='current_weather',
-                                      cascade='all, delete-orphan')
+    weather_type = relationship('WeatherType', lazy='joined')
 
     def __repr__(self):
-        return f"<RealtimeWeather(id={self.id}, city_id={self.city_id}, dt={self.dt}, temp={self.temp})>"
+        return f"<WeatherRealtime(id={self.id}, city_id={self.city_id}, dt={self.dt}, temp={self.temp})>"
 
 
 class WeatherForecast(Base):
@@ -133,7 +133,7 @@ class WeatherForecast(Base):
     __tablename__ = 'weather_forecasts'
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
-    city_id = Column(Integer, ForeignKey('cities.id', ondelete='CASCADE'),
+    city_id = Column(Integer, ForeignKey('weather_cities.id', ondelete='CASCADE'),
                      nullable=False, index=True, comment='城市ID外键')
 
     # 时间信息
@@ -170,76 +170,29 @@ class WeatherForecast(Base):
     # 降雨/降雪信息(可选)
     rain_3h = Column(Float, comment='过去3小时降雨量(mm)')
     snow_3h = Column(Float, comment='过去3小时降雪量(mm)')
+    weather_type_id = Column(Integer, ForeignKey('weather_types.id'), comment='天气状况ID外键')
 
     # 关系
     city = relationship('City', back_populates='forecasts')
-    weather_conditions = relationship('WeatherCondition', back_populates='forecast',
-                                      cascade='all, delete-orphan')
+    weather_type = relationship('WeatherType', lazy='joined')
 
     def __repr__(self):
         return f"<WeatherForecast(id={self.id}, city_id={self.city_id}, dt={self.dt}, temp={self.temp})>"
 
-class WeatherCondition(Base):
-    """天气预报状况详情表"""
-    __tablename__ = 'weather_conditions'
+
+class WeatherType(Base):
+    """天气状况详情表（通用，支持预报和实时天气）"""
+    __tablename__ = 'weather_types'
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
-    forecast_id = Column(Integer, ForeignKey('weather_forecasts.id', ondelete='CASCADE'),
-                         nullable=False, index=True, comment='天气预报ID外键')
 
     weather_id = Column(Integer, comment='天气状况ID')
     main = Column(String(50), comment='天气主要状况')
     description = Column(String(200), comment='天气描述')
     icon = Column(String(10), comment='天气图标代码')
 
-    # 关系
-    forecast = relationship('WeatherForecast', back_populates='weather_conditions')
-
     def __repr__(self):
-        return f"<WeatherCondition(id={self.id}, main='{self.main}', description='{self.description}')>"
-
-
-class RealtimeWeatherCondition(Base):
-    """实时天气状况详情表"""
-    __tablename__ = 'current_weather_conditions'
-
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
-    current_weather_id = Column(Integer, ForeignKey('weather_realtime.id', ondelete='CASCADE'),
-                                nullable=False, index=True, comment='实时天气ID外键')
-
-    weather_id = Column(Integer, comment='天气状况ID')
-    main = Column(String(50), comment='天气主要状况')
-    description = Column(String(200), comment='天气描述')
-    icon = Column(String(10), comment='天气图标代码')
-
-    # 关系
-    current_weather = relationship('RealtimeWeather', back_populates='weather_conditions')
-
-    def __repr__(self):
-        return f"<RealtimeWeatherCondition(id={self.id}, main='{self.main}', description='{self.description}')>"
-
-
-# 数据库引擎和会话工厂
-def create_database(database_url='sqlite:///weather_data.db'):
-    """
-    创建数据库和所有表
-
-    Args:
-        database_url: 数据库连接字符串
-                     SQLite:   'sqlite:///weather_data.db'
-                     MySQL:  'mysql+pymysql://user:password@localhost: 3306/weather_db'
-                     PostgreSQL: 'postgresql://user:password@localhost:5432/weather_db'
-    """
-    engine = create_engine(database_url, echo=True)
-    Base.metadata.create_all(engine)
-    return engine
-
-
-def get_session(engine):
-    """获取数据库会话"""
-    Session = sessionmaker(bind=engine)
-    return Session()
-
+        return f"<WeatherType(id={self.id}, main='{self.main}', description='{self.description}')>"
 
 def insert_weather_data(session, weather_json):
     """
@@ -261,9 +214,7 @@ def insert_weather_data(session, weather_json):
             latitude=city_data['coord']['lat'],
             longitude=city_data['coord']['lon'],
             population=city_data['population'],
-            timezone=city_data['timezone'],
-            sunrise=city_data['sunrise'],
-            sunset=city_data['sunset']
+            timezone=city_data['timezone']
         )
         session.add(city)
 
@@ -277,6 +228,28 @@ def insert_weather_data(session, weather_json):
 
         if existing_forecast:
             continue  # 跳过已存在的记录
+
+        # 2.1 获取或创建天气类型
+        weather_type_id = None
+        if forecast_item.get('weather') and len(forecast_item['weather']) > 0:
+            weather_item = forecast_item['weather'][0]  # 取第一个天气状况
+            weather_type = session.query(WeatherType).filter_by(
+                weather_id=weather_item['id'],
+                main=weather_item['main'],
+                icon=weather_item['icon']
+            ).first()
+
+            if not weather_type:
+                weather_type = WeatherType(
+                    weather_id=weather_item['id'],
+                    main=weather_item['main'],
+                    description=weather_item['description'],
+                    icon=weather_item['icon']
+                )
+                session.add(weather_type)
+                session.flush()  # 立即获取生成的ID
+
+            weather_type_id = weather_type.id
 
         # 创建预报记录
         forecast = WeatherForecast(
@@ -300,20 +273,10 @@ def insert_weather_data(session, weather_json):
             pop=forecast_item['pop'],
             sys_pod=forecast_item['sys']['pod'],
             rain_3h=forecast_item.get('rain', {}).get('3h'),
-            snow_3h=forecast_item.get('snow', {}).get('3h')
+            snow_3h=forecast_item.get('snow', {}).get('3h'),
+            weather_type_id=weather_type_id
         )
         session.add(forecast)
-
-        # 3. 插入天气状况详情
-        for weather_item in forecast_item['weather']:
-            weather_condition = WeatherCondition(
-                forecast=forecast,
-                weather_id=weather_item['id'],
-                main=weather_item['main'],
-                description=weather_item['description'],
-                icon=weather_item['icon']
-            )
-            session.add(weather_condition)
 
     # 提交事务
     session.commit()
@@ -339,19 +302,53 @@ def insert_current_weather_data(session, current_weather_json):
             country=current_weather_json['sys']['country'],
             latitude=current_weather_json['coord']['lat'],
             longitude=current_weather_json['coord']['lon'],
-            timezone=current_weather_json['timezone'],
-            sunrise=current_weather_json['sys']['sunrise'],
-            sunset=current_weather_json['sys']['sunset']
+            timezone=current_weather_json['timezone']
         )
         session.add(city)
     else:
-        # 更新城市的日出日落时间（可能每天变化）
-        city.sunrise = current_weather_json['sys']['sunrise']
-        city.sunset = current_weather_json['sys']['sunset']
+        # 更新城市的时区（可能变化）
         city.timezone = current_weather_json['timezone']
 
+    # 1.1 插入日出日落信息到SunriseSunset表
+    dt_value = current_weather_json['dt']
+    existing_sunrise_sunset = session.query(SunriseSunset).filter_by(
+        city_id=city.id,
+        dt=dt_value
+    ).first()
+
+    if not existing_sunrise_sunset:
+        sunrise_sunset = SunriseSunset(
+            city_id=city.id,
+            sunrise=current_weather_json['sys']['sunrise'],
+            sunset=current_weather_json['sys']['sunset'],
+            dt=dt_value
+        )
+        session.add(sunrise_sunset)
+
+    # 1.2 获取或创建天气类型
+    weather_type_id = None
+    if current_weather_json.get('weather') and len(current_weather_json['weather']) > 0:
+        weather_item = current_weather_json['weather'][0]  # 取第一个天气状况
+        weather_type = session.query(WeatherType).filter_by(
+            weather_id=weather_item['id'],
+            main=weather_item['main'],
+            icon=weather_item['icon']
+        ).first()
+
+        if not weather_type:
+            weather_type = WeatherType(
+                weather_id=weather_item['id'],
+                main=weather_item['main'],
+                description=weather_item['description'],
+                icon=weather_item['icon']
+            )
+            session.add(weather_type)
+            session.flush()  # 立即获取生成的ID
+
+        weather_type_id = weather_type.id
+
     # 2. 插入实时天气数据
-    current_weather = RealtimeWeather(
+    current_weather = WeatherRealtime(
         city_id=city.id,
         dt=current_weather_json['dt'],
         temp=current_weather_json['main']['temp'],
@@ -378,35 +375,34 @@ def insert_current_weather_data(session, current_weather_json):
         sys_sunrise=current_weather_json['sys']['sunrise'],
         sys_sunset=current_weather_json['sys']['sunset'],
         timezone=current_weather_json['timezone'],
-        cod=current_weather_json['cod']
+        cod=current_weather_json['cod'],
+        weather_type_id=weather_type_id
     )
     session.add(current_weather)
-
-    # 3. 插入天气状况详情
-    for weather_item in current_weather_json['weather']:
-        weather_condition = RealtimeWeatherCondition(
-            current_weather=current_weather,
-            weather_id=weather_item['id'],
-            main=weather_item['main'],
-            description=weather_item['description'],
-            icon=weather_item['icon']
-        )
-        session.add(weather_condition)
 
     # 提交事务
     session.commit()
     print(f"✓ 成功插入城市 {city.name} 的实时天气数据 (温度: {current_weather.temp - 273.15:.1f}°C)")
 
 
-if __name__ == '__main__':
+def main():
+    from sqlalchemy import create_engine
+    # Create engine for MariaDB
+    engine = create_engine('mysql+pymysql://root:xxxx@xxxx.local:3306/home_db')
+
     # 示例使用
     print("创建数据库和表结构...")
-    engine = create_database('sqlite:///weather_data.db')
+
+    # Create all tables
+    Base.metadata.create_all(engine)
 
     print("\n数据库表创建成功！")
     print("表结构：")
-    print("1. cities - 城市信息表")
-    print("2. weather_forecasts - 天气预报主表")
-    print("3. weather_conditions - 天气预报状况详情表")
+    print("1. weather_cities - 城市信息表")
+    print("2. weather_sunrise_sunset - 日出日落信息表")
+    print("3. weather_forecasts - 天气预报主表")
     print("4. weather_realtime - 实时天气主表")
-    print("5. current_weather_conditions - 实时天气状况详情表")
+    print("5. weather_conditions - 天气状况详情表（统一）")
+
+if __name__ == '__main__':
+    raise SystemExit(main())
