@@ -172,6 +172,10 @@ class Image(Base):
     # 只定义单向关系
     # image_type = relationship("ImageType")
     # 方式1: 使用 lazy='joined' 总是预加载
+    """
+    测试数据量：小数据（<1000行）joined可能更快
+    大数据集：优先selectin（避免JOIN膨胀）
+    """
     image_type = relationship('ImageType', lazy='joined')
 
     def __repr__(self):
