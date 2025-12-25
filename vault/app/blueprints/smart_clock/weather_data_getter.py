@@ -268,11 +268,20 @@ def insert_current_weather_data(session, current_weather_json):
     print(f"✓ 成功插入城市 {city.name} 的实时天气数据 (温度: {current_weather.temp}°C)")
 
 
+def should_fetch_forecast():
+    """判断是否需要获取天气预报（每3小时一次）"""
+    current_timestamp = int(datetime.now(timezone.utc).timestamp())
+    # 将时间戳按3小时（10800秒）分段，检查是否在窗口的前5分钟内
+    time_in_window = current_timestamp % (3 * 3600)  # 在当前3小时窗口内的秒数
+    return time_in_window < 300  # 前5分钟（300秒）内执行
+
+
 def main():
-    request_weather_forecast_data()
+    # 每3小时获取一次天气预报数据
+    if should_fetch_forecast():
+        request_weather_forecast_data()
 
     request_current_weather_data()
-    # print("\n" + "=" * 60 + "\n")
     return 0
 
 if __name__ == '__main__':

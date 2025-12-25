@@ -76,8 +76,8 @@ def create_engine_from_env():
     # 从环境变量读取配置
     db_config = {
         'username': os.getenv('DB_USER', 'root'),
-        'password': os.getenv('DB_PASSWORD', ''),
-        'host': os.getenv('DB_HOST', 'xxx.local'),
+        'password': os.getenv('DB_PASSWORD', 'xxxxx'),
+        'host': os.getenv('DB_HOST', 'macmini.local'),
         'port': os.getenv('DB_PORT', '3306'),
         'database': os.getenv('DB_DATABASE_HOME_CLIMATE', 'home_db')
     }
