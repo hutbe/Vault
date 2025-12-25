@@ -31,7 +31,7 @@ class SunriseSunset(Base):
 
     # 添加唯一约束，防止同一城市同一时间重复记录
     __table_args__ = (
-        Index('idx_city_dt', 'city_id', 'dt', unique=True),
+        Index('city_id', 'dt', unique=True),
     )
 
 

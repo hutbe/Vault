@@ -26,7 +26,7 @@ class WeatherAPI:
             url = f"{self.base_url}/{endpoint}?{urlencode(params)}"
 
             # 发送请求
-            response = urllib.request.urlopen(url, timeout=10)
+            response = urllib.request.urlopen(url, timeout=120)
 
             # 读取并解析JSON
             data = response.read()

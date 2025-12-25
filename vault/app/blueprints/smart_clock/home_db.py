@@ -87,8 +87,6 @@ def create_engine_from_env():
         f"@{db_config['host']}:{db_config['port']}/{db_config['database']}"
     )
 
-    logger.info(f"connection_string: ${connection_string}")
-
     return DatabaseManager(connection_string)
 
 db_manager = create_engine_from_env()

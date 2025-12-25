@@ -15,7 +15,7 @@ mkdir -p "$PROJECT_ROOT/logs"
 echo "========== $(date '+%Y-%m-%d %H:%M:%S') ==========" >> "$LOG_FILE"
 
 # 激活虚拟环境
-source "$PROJECT_ROOT/venv/bin/activate"
+source "$PROJECT_ROOT/vault/venv/bin/activate"
 
 # 加载 .env 文件中的环境变量
 if [ -f "$PROJECT_ROOT/.env" ]; then
@@ -24,6 +24,9 @@ if [ -f "$PROJECT_ROOT/.env" ]; then
 else
     echo "Warning: .env file not found" >> "$LOG_FILE"
 fi
+
+# 更改指向数据库连接的配置 .env文件中指向的是docker容器内的地址，这里改为localhost
+export DB_HOST=localhost
 
 # 运行 Python 脚本
 cd "$PROJECT_ROOT"

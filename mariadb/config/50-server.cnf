@@ -2,4 +2,4 @@
 [server]
 default-time-zone=+08:00
 [mysqld]
-# bind-address = 0.0.0.0  # 这是行尾注释
+bind-address = 0.0.0.0  # 这是行尾注释

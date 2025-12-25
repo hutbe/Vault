@@ -1,22 +1,24 @@
+import random
 from datetime import datetime, timezone
 from weather_api import WeatherAPI
-from weather_config import API_KEY, CITIES
+from weather_config import API_KEY, CITIES, API_KEY2, API_KEY3
 from weather_models import WeatherType, WeatherForecast, WeatherRealtime, City, SunriseSunset
 
 from home_db import db_manager
 
 def request_current_weather_data():
     # 创建API实例
-    api = WeatherAPI(API_KEY)
+    chosen_api_key = random.choice([API_KEY, API_KEY2, API_KEY3])
+    api = WeatherAPI(chosen_api_key)
 
     # 获取天气
-    city = CITIES["DaBaiDi"]
-    print("正在获取天气数据...")
+    city = CITIES["深圳"]
+    #print("正在获取天气数据...")
     weather = api.get_current_weather(city["lat"], city["lon"])
 
     if weather:
-        print(f"温度: {weather.get('main', {}).get('temp')}°C")
-        print(f"天气: {weather.get('weather', [{}])[0].get('description')}")
+        # print(f"温度: {weather.get('main', {}).get('temp')}°C")
+        # print(f"天气: {weather.get('weather', [{}])[0].get('description')}")
         with db_manager.session_scope() as session:
             try:
                 insert_current_weather_data(session, weather)
@@ -25,21 +27,22 @@ def request_current_weather_data():
 
 def request_weather_forecast_data():
     # 创建API实例
-    api = WeatherAPI(API_KEY)
+    chosen_api_key = random.choice([API_KEY, API_KEY2, API_KEY3])
+    api = WeatherAPI(chosen_api_key)
 
     # 获取深圳天气
-    city = CITIES["DaBaiDi"]
-    print("正在获取天气预报数据...")
+    city = CITIES["深圳"]
+    #print("正在获取天气预报数据...")
     forecast = None
     forecast = api.get_forecast(city["lat"], city["lon"], cnt=40)
 
     if forecast:
-        print("未来天气预报:")
+        #print("未来天气预报:")
         for item in forecast.get('list', []):
             dt_txt = item.get('dt_txt')
             temp = item.get('main', {}).get('temp')
             description = item.get('weather', [{}])[0].get('description')
-            print(f"{dt_txt} - 温度: {temp}°C), 天气: {description}")
+            #print(f"{dt_txt} - 温度: {temp}°C), 天气: {description}")
         with db_manager.session_scope() as session:
             try:
                 insert_weather_forecast_data(session, forecast)
@@ -193,10 +196,10 @@ def insert_current_weather_data(session, current_weather_json):
 
     # 1.1 插入日出日落信息到SunriseSunset表
     # 相同城市一天内只插入一次日出日落信息
-    dt_value = current_weather_json['dt']
+    dt_ordinal = datetime.now(timezone.utc).date().toordinal()
     existing_sunrise_sunset = session.query(SunriseSunset).filter_by(
         city_id=city.id,
-        dt=datetime.now(timezone.utc).date().toordinal()
+        dt=dt_ordinal  # ← 使用序数查询
     ).first()
 
     if not existing_sunrise_sunset:
@@ -204,7 +207,7 @@ def insert_current_weather_data(session, current_weather_json):
             city_id=city.id,
             sunrise=current_weather_json['sys']['sunrise'],
             sunset=current_weather_json['sys']['sunset'],
-            dt=dt_value
+            dt=dt_ordinal  # ← 使用序数插入
         )
         session.add(sunrise_sunset)
 
@@ -279,6 +282,7 @@ def should_fetch_forecast():
 def main():
     # 每3小时获取一次天气预报数据
     if should_fetch_forecast():
+        print("正在获取天气预报数据...")
         request_weather_forecast_data()
 
     request_current_weather_data()
