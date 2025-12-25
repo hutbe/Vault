@@ -21,8 +21,8 @@ class DatabaseManager:
             pool_recycle=3600,
 
             # 性能配置
-            echo_pool=True,  # 生产环境设为 False
-            echo=True,  # 生产环境设为 False
+            echo_pool=False,  # 生产环境设为 False
+            echo=False,  # 生产环境设为 False
 
             # 连接参数
             connect_args={

@@ -20,8 +20,8 @@ class DatabaseManager:
             pool_recycle=3600,
 
             # 性能配置
-            echo_pool=True,  # 生产环境设为 False
-            echo=True,  # 生产环境设为 False
+            echo_pool=False,  # 生产环境设为 False
+            echo=False,  # 生产环境设为 False
 
             # 连接参数
             connect_args={
@@ -77,7 +77,7 @@ def create_engine_from_env():
     db_config = {
         'username': os.getenv('DB_USER', 'root'),
         'password': os.getenv('DB_PASSWORD', ''),
-        'host': os.getenv('DB_HOST', 'localhost'),
+        'host': os.getenv('DB_HOST', 'xxx.local'),
         'port': os.getenv('DB_PORT', '3306'),
         'database': os.getenv('DB_DATABASE_HOME_CLIMATE', 'home_db')
     }

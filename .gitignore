@@ -30,6 +30,9 @@ conda_env/
 pytorch_python11/
 .idea/
 
+# Python环境配置
+weather_config.py
+
 # Spyder project settings
 .spyderproject
 .spyproject
