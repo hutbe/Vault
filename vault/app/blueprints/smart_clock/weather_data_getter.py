@@ -59,12 +59,12 @@ def insert_weather_forecast_data(session, weather_json):
     """
 
     """
-    插入前检查是否已存在三个小时内的的预报记录，避免插入三个小时内的重复数据。
+    插入前检查是否已存在三个小时内的的预报记录，避免插入三个小时内的重复数据。增加120秒为接口请求时间
     """
-    three_hours_ago = int((datetime.now(timezone.utc).timestamp()) - 3 * 3600)
+    three_hours_ago = int((datetime.now(timezone.utc).timestamp()) - (3 * 3600) + 120)
     existing_forecast = session.query(WeatherForecast).filter(
         WeatherForecast.city_id == weather_json['city']['id'],
-        WeatherForecast.dt >= three_hours_ago,
+        WeatherForecast.forecast_dt >= three_hours_ago,
     ).first()
     if existing_forecast:
         print(f"✓ 城市 {weather_json['city']['name']} 已存在三个小时内的预报记录，跳过插入。")
@@ -93,7 +93,7 @@ def insert_weather_forecast_data(session, weather_json):
         # 检查是否已存在相同的预报记录
         existing_forecast = session.query(WeatherForecast).filter_by(
             city_id=city.id,
-            dt=forecast_item['dt']
+            forecast_dt=forecast_dt
         ).first()
 
         if existing_forecast:
@@ -165,12 +165,12 @@ def insert_current_weather_data(session, current_weather_json):
     """
 
     """
-    插入前检查是否已存在五分钟内的记录，避免插入五分钟内的重复数据。
+    插入前检查是否已存在五分钟内的记录，避免插入五分钟内的重复数据。增加120秒为接口请求时间
     """
-    three_hours_ago = int((datetime.now(timezone.utc).timestamp()) - 5 * 60)
+    six_minutes_ago = int((datetime.now(timezone.utc).timestamp()) - (5 * 60) + 120)
     existing_forecast = session.query(WeatherRealtime).filter(
         WeatherRealtime.city_id == current_weather_json['id'],
-        WeatherRealtime.dt >= three_hours_ago,
+        WeatherRealtime.dt >= six_minutes_ago,
     ).first()
     if existing_forecast:
         print(f"✓ 城市 {current_weather_json['name']} 已存在五分钟内的天气记录，跳过插入。")
