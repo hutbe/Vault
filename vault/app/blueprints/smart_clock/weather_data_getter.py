@@ -89,16 +89,17 @@ def insert_weather_forecast_data(session, weather_json):
     # 2. 插入天气预报数据
     forecast_dt = int(datetime.now(timezone.utc).timestamp())
     forecast_dt_txt = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+
+    # 检查是否已存在相同的预报记录
+    existing_forecast = session.query(WeatherForecast).filter_by(
+        city_id=city.id,
+        forecast_dt=forecast_dt
+    ).first()
+
+    if existing_forecast:
+        return  # 跳过已存在的记录
+
     for forecast_item in weather_json['list']:
-        # 检查是否已存在相同的预报记录
-        existing_forecast = session.query(WeatherForecast).filter_by(
-            city_id=city.id,
-            forecast_dt=forecast_dt
-        ).first()
-
-        if existing_forecast:
-            continue  # 跳过已存在的记录
-
         # 2.1 获取或创建天气类型
         weather_type_id = None
         if forecast_item.get('weather') and len(forecast_item['weather']) > 0:
