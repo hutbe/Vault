@@ -22,7 +22,7 @@ if [ "$uptime_seconds" -gt "$MIN_UPTIME" ]; then
     mkdir -p "$PROJECT_ROOT/logs"
 
     # 记录开始时间
-    echo "========== $(date '+%Y-%m-%d %H:%M:%S') ==========" >> "$LOG_FILE"
+    #echo "========== $(date '+%Y-%m-%d %H:%M:%S') ==========" >> "$LOG_FILE"
 
     # 激活虚拟环境
     source "$PROJECT_ROOT/vault/venv/bin/activate"
@@ -40,7 +40,7 @@ if [ "$uptime_seconds" -gt "$MIN_UPTIME" ]; then
     
     # 方案1: 使用 timeout 命令（推荐）
     if command -v timeout &> /dev/null; then
-        echo "Starting script with ${TIMEOUT_SECONDS}s timeout..." >> "$LOG_FILE"
+        # echo "Starting script with ${TIMEOUT_SECONDS}s timeout..." >> "$LOG_FILE"
         
         # timeout 会在超时时自动终止进程及其子进程
         timeout --kill-after=10s ${TIMEOUT_SECONDS}s \
@@ -97,8 +97,8 @@ if [ "$uptime_seconds" -gt "$MIN_UPTIME" ]; then
         fi
     fi
 
-    echo "Completed at $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE"
-    echo "" >> "$LOG_FILE"
+    #echo "Completed at $(date '+%Y-%m-%d %H:%M:%S')" >> "$LOG_FILE"
+    #echo "" >> "$LOG_FILE"
 else
     echo "系统运行时间不足 $MIN_UPTIME 秒（当前：$uptime_seconds 秒），跳过任务"
     exit 0

@@ -197,7 +197,7 @@ class WeatherType(Base):
 def main():
     from sqlalchemy import create_engine
     # Create engine for MariaDB
-    engine = create_engine('mysql+pymysql://root:xxxxx@xxxxxx.local:3306/home_db')
+    engine = create_engine('mysql+pymysql://root:xxxxx@127.0.0.1:3306/home_db')
 
     # 示例使用
     print("创建数据库和表结构...")

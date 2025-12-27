@@ -152,7 +152,7 @@ def insert_weather_forecast_data(session, weather_json):
 
     # 提交事务
     session.commit()
-    print(f"✓ 成功插入城市 {city.name} 的天气预报数据")
+    # print(f"✓ 成功插入城市 {city.name} 的天气预报数据")
 
 
 def insert_current_weather_data(session, current_weather_json):
@@ -286,6 +286,7 @@ def main():
         request_weather_forecast_data()
 
     request_current_weather_data()
+    #request_weather_forecast_data()
     return 0
 
 if __name__ == '__main__':
