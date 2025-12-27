@@ -1,7 +1,8 @@
 from venv import logger
 
 from .home_db import db_manager
-from .home_model import HomeClimate, Fridge
+from .home_model import HomeClimate, Fridge, SensorDHT22
+from .weather_models import WeatherRealtime, WeatherForecast
 
 import pytz
 
@@ -14,6 +15,93 @@ from datetime import timedelta
 from ...utils import get_param, is_date_format_valid
 
 from loguru import logger
+
+def read_home_climate_records(start_date, end_date):
+    """
+    Args:
+        start_date: 开始日期 (格式: YYYY-MM-DD HH:MM:SS)
+        end_date: 结束日期 (格式: YYYY-MM-DD HH:MM:SS)
+
+    Returns:
+        包含标签和各项数据的字典
+    """
+    if not is_date_format_valid(start_date) or not is_date_format_valid(end_date):
+        return {
+            "timestamps": [],
+            "temperature": [],
+            "humidity": []
+        }
+    try:
+        with db_manager.session_scope() as session:
+            # 使用 SQLAlchemy 查询，计算本地时间（+8小时）
+            # 注意：MySQL 使用 DATE_ADD 或 TIMESTAMPADD 函数来添加时间偏移
+            local_time = func.date_add(
+                SensorDHT22.created_at,
+                text("INTERVAL 8 HOUR")
+            )
+
+            datas = session.query(SensorDHT22).filter(
+                local_time >= start_date,
+                local_time <= end_date
+            ).order_by(
+                SensorDHT22.created_at
+            ).all()
+
+            # 如果没有数据，返回空结果
+            if not datas:
+                return {
+                    "timestamps": [],
+                    "temperature": [],
+                    "humidity": []
+                }
+
+            # 处理数据和时区转换
+            processed_datas = []
+            utc_timezone = pytz.utc
+            target_timezone = pytz.timezone('Asia/Shanghai')
+
+            for data in datas:
+                item_dic = {
+                    'timestamps': data.created_at,
+                    'temperature': data.temperature,
+                    'humidity': data.humidity
+                }
+
+                # 处理时区转换
+                time_obj = data.created_at
+
+                # 如果 create_date 是 naive datetime（无时区信息）
+                if time_obj.tzinfo is None:
+                    # 假设数据库中的时间是 UTC 时间
+                    utc_datetime = utc_timezone.localize(time_obj)
+                else:
+                    # 如果已有时区信息，先转换为 UTC
+                    utc_datetime = time_obj.astimezone(utc_timezone)
+
+                # 转换为上海时区
+                local_time = utc_datetime.astimezone(target_timezone)
+                item_dic['create_date'] = local_time
+
+                processed_datas.append(item_dic)
+
+            # 提取数据到各个列表
+            timestamps = [item['create_at'].strftime("%H:%M") for item in processed_datas]
+            temperatures = [item['temperature'] for item in processed_datas]
+            humanities = [item['humidity'] for item in processed_datas]
+
+            return {
+                "timestamps": timestamps,
+                "temperature": temperatures,
+                "humidity": humanities
+            }
+
+    except Exception as e:
+        print(f"读取数据出错: {e}")
+        return {
+            "timestamps": [],
+            "temperature": [],
+            "humidity": []
+        }
 
 def read_home_climate_last_records_with_minutes(minutes):
     total_count = minutes // 5

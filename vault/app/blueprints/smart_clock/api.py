@@ -12,7 +12,8 @@ from ...response import (
 
 from .home_db import db_manager
 from .home_model import HomeClimate, AirConditioner, HomePod, ScreenLog, Note, Fridge
-from .home_db_helper import read_home_climate_last_records_with_minutes, read_home_climate_records_with_period, read_home_fridge_records_with_period
+from .home_db_helper import (read_home_climate_last_records_with_minutes,
+                             read_home_climate_records_with_period, read_home_fridge_records_with_period, read_home_climate_records)
 
 from ...utils import get_param, is_date_format_valid
 
@@ -30,11 +31,11 @@ def bad_request__error(e):
 def internal_server_error(e):
     raise ValidationException(message="inner error", error_code=ErrorCodes.MISSING_PARAMETER)
 
-@clock_bp.route('/initialized_db', methods=['POST'])
-def initialized_db():
-    init_db()
-    add_image_types()
-    return ApiResponse.success("All Done!")
+# @clock_bp.route('/initialized_db', methods=['POST'])
+# def initialized_db():
+#     init_db()
+#     add_image_types()
+#     return ApiResponse.success("All Done!")
 
 @clock_bp.route('/screen-action/<int:count>', methods=['GET'])
 def read_screen_action_api(count):
@@ -283,4 +284,12 @@ def insert_home_climate_record():
                 return ApiResponse.error(message=f"数据库错误: {e}")
     return ApiResponse.error(message=f"参数错误")
 
-
+@clock_bp.route('/home_climate/records', methods=['GET'])
+def get_home_climate_records():
+    start_date = get_param('start_date', None, type_=str)
+    end_date = get_param('end_date', None, type_=str)
+    if start_date and end_date:
+        result = read_home_climate_records(start_date, end_date)
+        return ApiResponse.success(data=result)
+    else:
+        return ApiResponse.error(message=f"数据库错误")

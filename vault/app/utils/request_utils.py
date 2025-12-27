@@ -30,7 +30,7 @@ def get_param(name, default=None, type_=int):
 
     return value
 
-def get_value_from_request_params_without_error(req, key):
+def request_params(req, key):
     result, error = get_value_from_request_params(req, key)
     return result
 

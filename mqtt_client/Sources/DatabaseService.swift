@@ -213,14 +213,14 @@ class DatabaseService {
             CREATE TABLE IF NOT EXISTS sensor_dht22 (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 sensor_id INT NOT NULL,
-                temperature DECIMAL(4,1) NOT NULL,
-                humidity DECIMAL(4,1) NOT NULL,
-                created_at TIMESTAMP NOT NULL,
+                temperature NUMERIC(5,2) NOT NULL,
+                humidity NUMERIC(5,2) NOT NULL,
+                created_at DATETIME NOT NULL,
                 -- 存储 ISO 8601 原始字符串，例如:
                 -- "2025-12-09T08:00:00Z" 或 "2025-12-09T08:00:00+08:00"
                 created_at_iso CHAR(33) NOT NULL,
                 -- 服务器接收时间（带毫秒精度）
-                received_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+                received_at DATETIME NOT NULL DEFAULT NOW()
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """,
             
@@ -230,7 +230,8 @@ class DatabaseService {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT NOT NULL,
                 content TEXT NOT NULL, 
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME NOT NULL DEFAULT NOW(),
+                received_at DATETIME NOT NULL DEFAULT NOW()
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         ]

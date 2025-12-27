@@ -8,7 +8,7 @@ from PIL import Image as PILImage
 from .image_db import db_manager, Image, ImageType
 from .image_db_helper import ImageDBHelper
 from .image_db_utils import allowed_file, calculate_fileobject_md5
-from ...utils import get_value_from_request_params, get_value_from_request_params_without_error
+from ...utils import get_value_from_request_params, request_params
 from ...response import (
     ApiResponse,
     register_global_error_handlers,
@@ -74,7 +74,7 @@ def upload_image():
     if not image_type:
         raise ResourceNotFoundException(resource_type="图片类型不存在", resource_id=ErrorCodes.RESOURCE_NOT_FOUND)
     folder_name = f"{image_type.type_id}_{image_type.type_name}"
-    tags = get_value_from_request_params_without_error(request, 'tags') or None
+    tags = request_params(request, 'tags') or None
     if not file or not allowed_file(file.filename, current_app.config['ALLOWED_EXTENSIONS']):
         raise ResourceNotFoundException(resource_type="不允许的文件类型", resource_id=ErrorCodes.INVALID_PARAMETER)
 
@@ -174,7 +174,7 @@ def upload_multiple_images():
 
     folder_name = f"{image_type.type_id}_{image_type.type_name}"
 
-    tags = get_value_from_request_params_without_error(request, 'tags') or None
+    tags = request_params(request, 'tags') or None
     results = []
     for file in files:
         if not file or not allowed_file(file.filename, current_app.config['ALLOWED_EXTENSIONS']):
@@ -252,9 +252,9 @@ def get_image_list_by_id():
     # 分页获取图片列表
     type_id, error1 = get_value_from_request_params(request, 'type_id')
     type_name, error2 = get_value_from_request_params(request, 'type_name')
-    keywords = get_value_from_request_params_without_error(request, 'keywords')
-    page = get_value_from_request_params_without_error(request, 'page')
-    page_size = get_value_from_request_params_without_error(request, 'page_size')
+    keywords = request_params(request, 'keywords')
+    page = request_params(request, 'page')
+    page_size = request_params(request, 'page_size')
 
     if error1 and error2:
         raise ValidationException(message="type_id参数没有传", error_code=ErrorCodes.MISSING_PARAMETER)
@@ -317,9 +317,9 @@ def get_thumbnail(filename):
 def get_images_for_typeid(req):
     type_id, error1 = get_value_from_request_params(req, 'type_id')
     type_name, error2 = get_value_from_request_params(req, 'type_name')
-    keywords = get_value_from_request_params_without_error(req, 'keywords')
-    page = get_value_from_request_params_without_error(req, 'page')
-    page_size = get_value_from_request_params_without_error(req, 'page_size')
+    keywords = request_params(req, 'keywords')
+    page = request_params(req, 'page')
+    page_size = request_params(req, 'page_size')
 
     if error1 and error2:
         raise ValidationException(message="type_id参数没有传", error_code=ErrorCodes.MISSING_PARAMETER)
@@ -548,7 +548,7 @@ def create_image_types():
     if check_special_characters(type_name):
         raise ValidationException(message="type_name参数不能含有特殊字符，并且不能多于50个字符", error_code=ErrorCodes.INVALID_PARAMETER)
 
-    description = get_value_from_request_params_without_error(request, 'description')
+    description = request_params(request, 'description')
 
     with db_manager.session_scope() as session:
         existing_type = session.query(ImageType).filter(
@@ -619,7 +619,7 @@ def update_image_type(type_id):
     if check_special_characters(type_name):
         raise ValidationException(message="type_name参数不能含有特殊字符，并且不能多于50个字符", error_code=ErrorCodes.INVALID_PARAMETER)
 
-    description = get_value_from_request_params_without_error(request, 'description')
+    description = request_params(request, 'description')
     if error2:
         raise ValidationException(message="没有传type_name参数，只支持修改type_name及tags", error_code=ErrorCodes.MISSING_PARAMETER)
 

@@ -6,6 +6,59 @@ from typing import Dict, Any
 # 创建基类
 Base = declarative_base()
 
+
+class MqttMessage(Base):
+    __tablename__ = 'mqtt_messages'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    topic = Column(String(255), nullable=False, index=True)
+    payload = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.now, comment='记录接收时间')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'topic': self.topic,
+            'payload': self.payload,
+            'created_at': self.create_date.isoformat() if self.create_date else None,
+        }
+    __table_args__ = (
+        {'mysql_engine': 'InnoDB', 'mysql_charset': 'utf8mb4'}
+    )
+
+class SensorDHT22(Base):
+    __tablename__ = 'sensor_dht22'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sensor_id = Column(Integer, nullable=False)
+    temperature = Column(Numeric(5, 2), comment='温度(°C)')
+    humidity = Column(Numeric(5, 2), comment='湿度')
+    created_at = Column(DateTime, nullable=False)
+    created_at_iso = Column(String(33), nullable=False)
+    received_at = Column(DateTime, default=datetime.now, comment='记录接收时间')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'sensor_id': self.sensor_id,
+            'temperature': self.temperature,
+            'humidity': self.humidity,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Note(Base):
+    __tablename__ = 'note'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(Text, nullable=False)
+    received_at = Column(DateTime, default=datetime.now, comment='记录接收时间')
+
+
+
+
 class HomeClimate(Base):
     """环境信息表 - 对应 surroundings 表"""
     __tablename__ = 'home_climate'
@@ -106,22 +159,6 @@ class ScreenLog(Base):
             'action': self.action,
             'create_date': self.create_date.isoformat() if self.create_date else None,
         }
-
-class Note(Base):
-    """笔记表"""
-    __tablename__ = 'note'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    note = Column(Text)
-    create_date = Column(DateTime, default=datetime.now)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'note': self.note,
-            'create_date': self.create_date.isoformat() if self.create_date else None,
-        }
-
 
 class Fridge(Base):
     """冰箱表"""
