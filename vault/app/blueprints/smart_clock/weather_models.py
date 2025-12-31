@@ -12,7 +12,7 @@ class SunriseSunset(Base):
     # [实时天气信息 - 接口说明文档](https: // openweathermap.org / current)
     __tablename__ = 'weather_sunrise_sunset'
     id = Column(Integer, primary_key=True,  autoincrement=True, comment='ID')
-    city_id = Column(Integer, ForeignKey('weather_cities.id', ondelete='CASCADE'),
+    city_id = Column(Integer, ForeignKey('weather_cities.id', ondelete='CASCADE', name='fk_weather_sunrise_sunset_city'),
                      nullable=False, index=True, comment='城市ID外键')
     sunrise = Column(Integer, comment='日出时间戳')
     sunset = Column(Integer, comment='日落时间戳')
@@ -72,8 +72,6 @@ class WeatherRealtime(Base):
     __tablename__ = 'weather_realtime'
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
-    city_id = Column(Integer, ForeignKey('weather_cities.id', ondelete='CASCADE'),
-                     nullable=False, index=True, comment='城市ID外键')
 
     # 时间信息
     dt = Column(BigInteger, nullable=False, index=True, comment='数据计算时间戳')
@@ -118,7 +116,19 @@ class WeatherRealtime(Base):
     timezone = Column(Integer, comment='时区偏移(秒)')
     cod = Column(Integer, comment='响应代码')
 
-    weather_type_id = Column(Integer, ForeignKey('weather_types.id'), comment='天气状况ID外键')
+    city_id = Column(
+        Integer, 
+        ForeignKey('weather_cities.id', ondelete='CASCADE', name='fk_weather_realtime_city'),
+        nullable=False, 
+        index=True, 
+        comment='城市ID外键'
+    )
+    
+    weather_type_id = Column(
+        Integer, 
+        ForeignKey('weather_types.id', name='fk_weather_realtime_weather_type'), 
+        comment='天气状况ID外键'
+    )
 
     # 关系
     city = relationship('City', back_populates='weather_realtime')
@@ -133,8 +143,6 @@ class WeatherForecast(Base):
     __tablename__ = 'weather_forecasts'
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='主键ID')
-    city_id = Column(Integer, ForeignKey('weather_cities.id', ondelete='CASCADE'),
-                     nullable=False, index=True, comment='城市ID外键')
 
     # 时间信息
     forecast_dt = Column(BigInteger, nullable=False, index=True, comment='记录预报时间')
@@ -170,7 +178,20 @@ class WeatherForecast(Base):
     # 降雨/降雪信息(可选)
     rain_3h = Column(Float, comment='过去3小时降雨量(mm)')
     snow_3h = Column(Float, comment='过去3小时降雪量(mm)')
-    weather_type_id = Column(Integer, ForeignKey('weather_types.id'), comment='天气状况ID外键')
+
+    city_id = Column(
+        Integer, 
+        ForeignKey('weather_cities.id', ondelete='CASCADE', name='fk_weather_forecast_city'),
+        nullable=False, 
+        index=True, 
+        comment='城市ID外键'
+    )
+    
+    weather_type_id = Column(
+        Integer, 
+        ForeignKey('weather_types.id', name='fk_weather_forecast_weather_type'), 
+        comment='天气状况ID外键'
+    )
 
     # 关系
     city = relationship('City', back_populates='forecasts')
@@ -197,7 +218,7 @@ class WeatherType(Base):
 def main():
     from sqlalchemy import create_engine
     # Create engine for MariaDB
-    engine = create_engine('mysql+pymysql://root:xxxxx@127.0.0.1:3306/home_db')
+    engine = create_engine('mysql+pymysql://root:xxxxxx@127.0.0.1:3306/home_db')
 
     # 示例使用
     print("创建数据库和表结构...")
