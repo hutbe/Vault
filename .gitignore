@@ -65,3 +65,13 @@ nginx/log/
 # swift 和 Xcode相关
 .build/
 .swiftpm/
+
+
+# 数据库相关
+
+*.sqlite3
+*.db-journal
+*.sqlite-shm
+*.sqlite-wal
+*.sql
+*.db
