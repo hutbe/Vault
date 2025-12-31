@@ -25,7 +25,7 @@ done
 
 echo "正在查找最新备份..."
 # 获取最新的备份文件
-LATEST_BACKUP=$(ssh ${SERVER_USER}@${SERVER_IP}:${LOCAL_DB_PORT} "ls -t ${SERVER_BACKUP_PATH}/*.sql.gz 2>/dev/null | head -1") || error_exit "无法获取备份文件列表"
+LATEST_BACKUP=$(ssh ${SERVER_USER}@${SERVER_IP} "ls -t ${SERVER_BACKUP_PATH}/*.sql.gz 2>/dev/null | head -1") || error_exit "无法获取备份文件列表"
 
 if [ -z "$LATEST_BACKUP" ]; then
     error_exit "未找到备份文件"
@@ -51,9 +51,11 @@ fi
 # 删除本地数据库并重新创建
 echo "正在删除旧数据库..."
 mariadb -h ${LOCAL_DB_HOST} -u ${LOCAL_DB_USER} -p${LOCAL_DB_PASS} << EOF || error_exit "删除数据库失败"
+SET FOREIGN_KEY_CHECKS=0;
 DROP DATABASE IF EXISTS home_db;
 DROP DATABASE IF EXISTS image_db;
 DROP DATABASE IF EXISTS vault_db;
+SET FOREIGN_KEY_CHECKS=1;
 EOF
 
 # 导入数据
