@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, BIGINT, String, Float, Text, Numeric, Boolean, DateTime, ForeignKey, Table
 from sqlalchemy.orm import declarative_base, relationship
 from typing import Dict, Any
@@ -13,7 +13,7 @@ class MqttMessage(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     topic = Column(String(255), nullable=False, index=True)
     payload = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.now, comment='记录接收时间')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), comment='记录接收时间')
 
     def to_dict(self):
         return {
@@ -35,7 +35,7 @@ class SensorDHT22(Base):
     humidity = Column(Numeric(5, 2), comment='湿度')
     created_at = Column(DateTime, nullable=False)
     created_at_iso = Column(String(33), nullable=False)
-    received_at = Column(DateTime, default=datetime.now, comment='记录接收时间')
+    received_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), comment='记录接收时间')
 
     def to_dict(self):
         return {
@@ -54,7 +54,7 @@ class Note(Base):
     user_id = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(Text, nullable=False)
-    received_at = Column(DateTime, default=datetime.now, comment='记录接收时间')
+    received_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), comment='记录接收时间')
 
 
 
@@ -81,7 +81,7 @@ class HomeClimate(Base):
     outdoors_temp_max = Column(Float)
     outdoors_pressure = Column(Float)
     outdoors_humidity = Column(Float)
-    create_date = Column(DateTime, default=datetime.now)
+    create_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -115,7 +115,7 @@ class AirConditioner(Base):
     temperature = Column(Float)
     model = Column(Integer)
     description = Column(String(50))
-    create_date = Column(DateTime, default=datetime.now)
+    create_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -135,7 +135,7 @@ class HomePod(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     temperature = Column(Float)
     humidity = Column(Float)
-    create_date = Column(DateTime, default=datetime.now)
+    create_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -151,7 +151,7 @@ class ScreenLog(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     action = Column(Boolean)
-    create_date = Column(DateTime, default=datetime.now)
+    create_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -168,7 +168,7 @@ class Fridge(Base):
     tag = Column(String(50))
     temperature = Column(Float)
     humidity = Column(Float)
-    create_date = Column(DateTime, default=datetime.now)
+    create_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {

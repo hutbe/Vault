@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer,BigInteger, Float, String, DateTime, ForeignKey, Text, Index, Numeric
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.orm import relationship, sessionmaker
-from datetime import datetime
+from datetime import datetime, timezone
 
 # 创建基类
 Base = declarative_base()
@@ -19,7 +19,7 @@ class SunriseSunset(Base):
 
     # 时间信息
     dt = Column(BigInteger, nullable=False, index=True, comment='数据计算时间戳')
-    created_at = Column(DateTime, default=datetime.now, comment='记录创建时间')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), comment='记录创建时间')
 
     """
     # 方式1: 定义单向关系使用 lazy='joined' 总是预加载
@@ -75,7 +75,7 @@ class WeatherRealtime(Base):
 
     # 时间信息
     dt = Column(BigInteger, nullable=False, index=True, comment='数据计算时间戳')
-    created_at = Column(DateTime, default=datetime.now, comment='记录创建时间')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), comment='记录创建时间')
 
     # 主要天气数据
     temp = Column(Numeric(5, 2), comment='温度(°C)')

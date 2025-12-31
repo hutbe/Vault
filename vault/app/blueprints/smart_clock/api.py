@@ -292,4 +292,4 @@ def get_home_climate_records():
         result = read_home_climate_records(start_date, end_date)
         return ApiResponse.success(data=result)
     else:
-        return ApiResponse.error(message=f"数据库错误")
+        return ApiResponse.error(message=f"参数错误")
