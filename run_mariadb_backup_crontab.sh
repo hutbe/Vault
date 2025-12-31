@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 配置信息
-source '/home/hut/passwords/db_passwords'
+source '/home/hut/passwords/db_password'
 
 # 备份配置
 BACKUP_DIR="/home/hut/mariadb_backups"

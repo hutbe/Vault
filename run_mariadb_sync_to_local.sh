@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 配置信息
-source '/Users/hut/passwords/db_passwords'
+source '/Users/hut/passwords/db_password'
 
 # 启用错误时退出
 set -e
