@@ -1,6 +1,7 @@
 import urllib.request
 import json
 from urllib.parse import urlencode
+from datetime import datetime
 
 
 class WeatherAPI:
@@ -18,6 +19,8 @@ class WeatherAPI:
         :param params: 请求参数字典
         :return: JSON数据或None
         """
+        current_datetime = datetime.now()
+        formatted_string = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
         try:
             # 添加API密钥到参数
             params['appid'] = self.api_key
@@ -35,16 +38,16 @@ class WeatherAPI:
             return result
 
         except urllib.error.HTTPError as e:
-            print(f"HTTP错误: {e.code} - {e.reason}")
+            print(f"{formatted_string}-HTTP错误: {e.code} - {e.reason}")
             return None
         except urllib.error.URLError as e:
-            print(f"网络错误: {e.reason}")
+            print(f"{formatted_string}-网络错误: {e.reason}")
             return None
         except json.JSONDecodeError:
-            print("JSON解析失败")
+            print("{formatted_string}-JSON解析失败")
             return None
         except Exception as e:
-            print(f"请求失败: {e}")
+            print(f"{formatted_string}-请求失败: {e}")
             return None
 
     def get_current_weather(self, lat, lon, lang='zh', units='metric'):

@@ -268,7 +268,7 @@ def insert_current_weather_data(session, current_weather_json):
 
     # 提交事务
     session.commit()
-    print(f"✓ 成功插入城市 {city.name} 的实时天气数据 (温度: {current_weather.temp}°C)")
+    #print(f"✓ 成功插入城市 {city.name} 的实时天气数据 (温度: {current_weather.temp}°C)")
 
 
 def should_fetch_forecast():
