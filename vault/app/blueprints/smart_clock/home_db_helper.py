@@ -50,10 +50,12 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
     if client_timezone is None:
         client_timezone = pytz.timezone(timezone)
 
+    #logger.info(f'B start_date: {start_datetime.isoformat()} end_date: {end_datetime.isoformat()} client_timezone: {utc_timezone}')
+
     start_datetime_utc = start_datetime.astimezone(utc_timezone)
     end_datetime_utc = end_datetime.astimezone(utc_timezone)
 
-    # logger.info(f'start_date: {start_datetime_utc} end_date: {end_datetime_utc} client_timezone: {client_timezone}')
+    #logger.info(f'A start_date: {start_datetime_utc.isoformat()} end_date: {end_datetime_utc.isoformat()} client_timezone: {client_timezone}')
 
     try:
         with db_manager.session_scope() as session:
@@ -76,12 +78,9 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
                 create_time_obj = data.created_at
                 # 如果 create_date 是 naive datetime（无时区信息）
                 if create_time_obj.tzinfo is None:
-                    # 假设数据库中的时间是 UTC 时间
+                    # 给create_time_obj添加时区信息
                     utc_datetime = utc_timezone.localize(create_time_obj)
-                else:
-                    # 如果已有时区信息，先转换为 UTC
-                    utc_datetime = create_time_obj.astimezone(utc_timezone)
-                # 转换local时区
+                # 将utc_datetime转换到client_timezone时区
                 local_time = utc_datetime.astimezone(client_timezone)
                 item_dic['create_date'] = local_time
                 # item_dic['create_date'] = create_time_obj

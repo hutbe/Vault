@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional, Union
 import re
+import pytz
 from loguru import logger
 
 def is_date_format_valid(date_string):
@@ -69,10 +70,17 @@ def parse_utc_time(time_string: str) -> Optional[datetime]:
         '%Y-%m-%d',
     ]
 
+    utc_timezone = pytz.utc
+
     # 尝试标准格式
     for fmt in utc_formats:
         try:
-            return datetime.strptime(time_string, fmt)
+            dt_naive = datetime.strptime(time_string, fmt)
+            dt_aware = dt_naive
+            # 添加 UTC 时区信息 只对以 Z 结尾的字符串添加时区信息
+            if time_string.endswith('Z'):
+                dt_aware = utc_timezone.localize(dt_naive)
+            return dt_aware
         except ValueError:
             continue
 
