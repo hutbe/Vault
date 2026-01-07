@@ -288,8 +288,16 @@ def insert_home_climate_record():
 def get_home_climate_records():
     start_date = get_param('start_date', None, type_=str)
     end_date = get_param('end_date', None, type_=str)
+    timezone = get_param('timezone', "Asia/Shanghai", type_=str)
     if start_date and end_date:
-        result = read_home_climate_records(start_date, end_date)
-        return ApiResponse.success(data=result)
+        try:
+            result = read_home_climate_records(start_date, end_date, timezone)
+            return ApiResponse.success(data=result)
+        except ValueError as e:
+            return ApiResponse.error(message=f"{e}")
+        except IndexError as e:
+            return ApiResponse.error(message=f"{e}")
+        except Exception as e:
+            print(f"其他异常: {e}")
     else:
         return ApiResponse.error(message=f"参数错误")

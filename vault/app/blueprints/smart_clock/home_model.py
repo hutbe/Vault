@@ -34,7 +34,7 @@ class SensorDHT22(Base):
     sensor_id = Column(Integer, nullable=False)
     temperature = Column(Numeric(5, 2), comment='温度(°C)')
     humidity = Column(Numeric(5, 2), comment='湿度')
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, nullable=False, comment='UTC时间')
     created_at_iso = Column(String(33), nullable=False)
     received_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                          server_default=text('UTC_TIMESTAMP()'), nullable=False, comment='记录接收时间')
@@ -55,7 +55,7 @@ class Note(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, comment='UTC时间')
     received_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                          server_default=text('UTC_TIMESTAMP()'), nullable=False, comment='记录接收时间')
 

@@ -7,85 +7,89 @@ from .weather_models import WeatherRealtime, WeatherForecast
 import pytz
 
 from sqlalchemy import text
-from sqlalchemy import func, literal, cast
-from sqlalchemy.types import DateTime
+from sqlalchemy import func
 
 from datetime import timedelta
 
-from ...utils import get_param, is_date_format_valid
+from ...utils import get_param, is_date_format_valid, validate_and_parse_utc
 
 from loguru import logger
 
-def read_home_climate_records(start_date, end_date):
+def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
     """
     Args:
         start_date: 开始日期 (格式: YYYY-MM-DD HH:MM:SS)
         end_date: 结束日期 (格式: YYYY-MM-DD HH:MM:SS)
+        timezone: IANA 时区标识符,默认为中国上海,eg:Asia/Shanghai,Asia/Hong_Kong,Asia/Taipei,Africa/Cairo,America/New_York,Pacific/Auckland
 
     Returns:
         包含标签和各项数据的字典
     """
-    if not is_date_format_valid(start_date) or not is_date_format_valid(end_date):
-        return {
-            "timestamps": [],
-            "temperature": [],
-            "humidity": []
-        }
+
+    start_datetime = validate_and_parse_utc(start_date)
+    end_datetime = validate_and_parse_utc(end_date)
+
+    # start_datetime_utc_string = start_datetime.astimezone(pytz.utc).isoformat()
+    # logger.info(f"start_datetime_utc_string: {start_datetime_utc_string}")
+
+    if not start_datetime or not end_datetime:
+        raise ValueError("时间参数格式错误")
+
+    if start_datetime > end_datetime:
+        start_datetime, end_datetime = end_datetime, start_datetime
+
+    # 计算时间差
+    diff = end_datetime - start_datetime
+    is_over_24h = diff > timedelta(hours=24)
+    if is_over_24h:
+        raise IndexError("查询记录的跨度不能超过24小时")
+
+    # 获取时区信息
+    utc_timezone = pytz.utc
+    client_timezone = start_datetime.tzinfo
+    if client_timezone is None:
+        client_timezone = pytz.timezone(timezone)
+
+    start_datetime_utc = start_datetime.astimezone(utc_timezone)
+    end_datetime_utc = end_datetime.astimezone(utc_timezone)
+
+    # logger.info(f'start_date: {start_datetime_utc} end_date: {end_datetime_utc} client_timezone: {client_timezone}')
+
     try:
         with db_manager.session_scope() as session:
-            # 使用 SQLAlchemy 查询，计算本地时间（+8小时）
-            # 注意：MySQL 使用 DATE_ADD 或 TIMESTAMPADD 函数来添加时间偏移
-            local_time = func.date_add(
-                SensorDHT22.created_at,
-                text("INTERVAL 8 HOUR")
-            )
-
             datas = session.query(SensorDHT22).filter(
-                local_time >= start_date,
-                local_time <= end_date
+                SensorDHT22.created_at >= start_datetime_utc,
+                SensorDHT22.created_at <= end_datetime_utc
             ).order_by(
                 SensorDHT22.created_at
             ).all()
 
-            # 如果没有数据，返回空结果
-            if not datas:
-                return {
-                    "timestamps": [],
-                    "temperature": [],
-                    "humidity": []
-                }
-
             # 处理数据和时区转换
             processed_datas = []
-            utc_timezone = pytz.utc
-            target_timezone = pytz.timezone('Asia/Shanghai')
-
             for data in datas:
                 item_dic = {
                     'timestamps': data.created_at,
                     'temperature': data.temperature,
                     'humidity': data.humidity
                 }
-
                 # 处理时区转换
-                time_obj = data.created_at
-
+                create_time_obj = data.created_at
                 # 如果 create_date 是 naive datetime（无时区信息）
-                if time_obj.tzinfo is None:
+                if create_time_obj.tzinfo is None:
                     # 假设数据库中的时间是 UTC 时间
-                    utc_datetime = utc_timezone.localize(time_obj)
+                    utc_datetime = utc_timezone.localize(create_time_obj)
                 else:
                     # 如果已有时区信息，先转换为 UTC
-                    utc_datetime = time_obj.astimezone(utc_timezone)
-
-                # 转换为上海时区
-                local_time = utc_datetime.astimezone(target_timezone)
+                    utc_datetime = create_time_obj.astimezone(utc_timezone)
+                # 转换local时区
+                local_time = utc_datetime.astimezone(client_timezone)
                 item_dic['create_date'] = local_time
+                # item_dic['create_date'] = create_time_obj
 
                 processed_datas.append(item_dic)
 
             # 提取数据到各个列表
-            timestamps = [item['create_at'].strftime("%H:%M") for item in processed_datas]
+            timestamps = [item['create_date'].strftime("%H:%M") for item in processed_datas]
             temperatures = [item['temperature'] for item in processed_datas]
             humanities = [item['humidity'] for item in processed_datas]
 
@@ -96,12 +100,7 @@ def read_home_climate_records(start_date, end_date):
             }
 
     except Exception as e:
-        print(f"读取数据出错: {e}")
-        return {
-            "timestamps": [],
-            "temperature": [],
-            "humidity": []
-        }
+        raise ValueError(f"查询错误{e}")
 
 def read_home_climate_last_records_with_minutes(minutes):
     total_count = minutes // 5
