@@ -68,13 +68,14 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
 
             # 处理数据和时区转换
             processed_datas = []
-            processed_datas_dic = {}
+            processed_data2 = []
             for data in datas:
                 item_dic = {
                     'timestamps': data.created_at,
                     'temperature': data.temperature,
                     'humidity': data.humidity
                 }
+                item_dic = {}
                 # 处理时区转换
                 create_time_obj = data.created_at
                 # 如果 create_date 是 naive datetime（无时区信息）
@@ -88,11 +89,13 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
                 # for testing
                 # item_dic['create_date'] = create_time_obj
 
-                processed_datas.append(item_dic)
+                # processed_datas.append(item_dic)
 
                 # other data formate
                 local_timestamps = local_time.strftime("%H:%M")
-                processed_datas_dic[local_timestamps] = {"temperature": data.temperature, "humidity": data.humidity}
+                # logger.info(f"local_time: {local_time} local_timestamps: {local_timestamps}")
+                item_dic = {"time":local_timestamps, "temp": data.temperature, "hum": data.humidity}
+                processed_data2.append(item_dic)
 
             # 提取数据到各个列表
             # timestamps = [item['create_date'].strftime("%H:%M") for item in processed_datas]
@@ -104,7 +107,8 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
             #     "temperature": temperatures,
             #     "humidity": humanities
             # }
-            return processed_datas_dic
+            return {"records": processed_data2,
+                    "timezone": client_timezone.tzname(None)}
 
     except Exception as e:
         raise ValueError(f"查询错误{e}")
