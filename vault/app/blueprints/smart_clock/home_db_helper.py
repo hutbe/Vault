@@ -68,6 +68,7 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
 
             # 处理数据和时区转换
             processed_datas = []
+            processed_datas_dic = {}
             for data in datas:
                 item_dic = {
                     'timestamps': data.created_at,
@@ -82,21 +83,28 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
                     utc_datetime = utc_timezone.localize(create_time_obj)
                 # 将utc_datetime转换到client_timezone时区
                 local_time = utc_datetime.astimezone(client_timezone)
-                item_dic['create_date'] = local_time
+                # item_dic['create_date'] = local_time
+
+                # for testing
                 # item_dic['create_date'] = create_time_obj
 
                 processed_datas.append(item_dic)
 
-            # 提取数据到各个列表
-            timestamps = [item['create_date'].strftime("%H:%M") for item in processed_datas]
-            temperatures = [item['temperature'] for item in processed_datas]
-            humanities = [item['humidity'] for item in processed_datas]
+                # other data formate
+                local_timestamps = local_time.strftime("%H:%M")
+                processed_datas_dic[local_timestamps] = {"temperature": data.temperature, "humidity": data.humidity}
 
-            return {
-                "timestamps": timestamps,
-                "temperature": temperatures,
-                "humidity": humanities
-            }
+            # 提取数据到各个列表
+            # timestamps = [item['create_date'].strftime("%H:%M") for item in processed_datas]
+            # temperatures = [item['temperature'] for item in processed_datas]
+            # humanities = [item['humidity'] for item in processed_datas]
+            #
+            # return {
+            #     "timestamps": timestamps,
+            #     "temperature": temperatures,
+            #     "humidity": humanities
+            # }
+            return processed_datas_dic
 
     except Exception as e:
         raise ValueError(f"查询错误{e}")
