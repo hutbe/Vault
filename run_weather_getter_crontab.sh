@@ -54,7 +54,8 @@ if [ "$uptime_seconds" -gt "$MIN_UPTIME" ]; then
         elif [ $EXIT_CODE -eq 137 ]; then
             echo "ERROR: Script was killed (SIGKILL) after timeout grace period" >> "$LOG_FILE"
         elif [ $EXIT_CODE -eq 0 ]; then
-            #echo "Script executed successfully" >> "$LOG_FILE"
+            : # Do nothing on success
+            # echo "Script executed successfully" >> "$LOG_FILE"
         else
             echo "Script execution failed with exit code $EXIT_CODE" >> "$LOG_FILE"
         fi
@@ -90,6 +91,7 @@ if [ "$uptime_seconds" -gt "$MIN_UPTIME" ]; then
             wait $PYTHON_PID
             EXIT_CODE=$?
             if [ $EXIT_CODE -eq 0 ]; then
+                : # Do nothing on success
                 #echo "Script executed successfully" >> "$LOG_FILE"
             else
                 echo "Script execution failed with exit code $EXIT_CODE" >> "$LOG_FILE"
