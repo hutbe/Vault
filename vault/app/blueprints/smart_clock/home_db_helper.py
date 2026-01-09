@@ -1,4 +1,3 @@
-from venv import logger
 
 from .home_db import db_manager
 from .home_model import HomeClimate, Fridge, SensorDHT22
@@ -9,15 +8,87 @@ import pytz
 from sqlalchemy import text
 from sqlalchemy import func
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from ...utils import get_param, is_date_format_valid, validate_and_parse_utc
 
 from loguru import logger
 
-def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
+def read_current_climate(location_id):
     """
     Args:
+        location_id: 位置id
+
+    Returns:
+        包含标签和各项数据的字典
+    """
+    # 获取当前 UTC 时间
+    current_utc = datetime.now(pytz.utc)
+
+    # for testing
+    # time_str = "2026-01-05 08:55:02.000"
+    # dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S.%f")
+    # current_utc = dt.replace(tzinfo=pytz.utc)
+
+    # 获取 30 分钟前的 UTC 时间
+    minutes_ago = current_utc - timedelta(minutes=30)
+
+    sensor_id = location_id
+    city_id = 6958812
+    try:
+        with db_manager.session_scope() as session:
+            dht22 = session.query(SensorDHT22).filter(
+                SensorDHT22.created_at >= minutes_ago,
+                SensorDHT22.created_at <= current_utc,
+                SensorDHT22.sensor_id == sensor_id
+            ).order_by(
+                SensorDHT22.id.desc()
+            ).first()
+
+            weather = session.query(WeatherRealtime).filter(
+                WeatherRealtime.created_at >= minutes_ago,
+                WeatherRealtime.created_at <= current_utc,
+                WeatherRealtime.city_id == city_id
+            ).order_by(
+                WeatherRealtime.id.desc()
+            ).first()
+
+            res_dic = {"temperature": "--",
+                       "humidity": "--",
+                       "weather": "--",
+                       "weather_code": "--",
+                       "weather_des": "--",
+                       "weather_icon": "--",
+                       "outdoors_temp": "--",
+                       "outdoors_feels_like": "--",
+                       "outdoors_humidity": "--",
+                       "wind_deg": "--"
+                       }
+            if dht22:
+                res_dic["temperature"] = dht22.temperature
+                res_dic["humidity"] = dht22.humidity
+
+            if weather:
+                res_dic["weather"] = weather.weather_type.main
+                res_dic["weather_code"] = weather.weather_type.weather_id
+                res_dic["weather_des"] = weather.weather_type.description
+                res_dic["weather_icon"] = weather.weather_type.icon
+
+
+                res_dic["outdoors_temp"] = weather.temp
+                res_dic["outdoors_feels_like"] = weather.feels_like
+                res_dic["outdoors_humidity"] = weather.humidity
+                res_dic["wind_deg"] = weather.wind_deg
+
+            return res_dic
+    except Exception as e:
+        raise ValueError(f"查询错误{e}")
+
+
+def read_home_climate_records(location_id, start_date, end_date, timezone='Asia/Shanghai'):
+    """
+    Args:
+        location_id: 位置id
         start_date: 开始日期 (格式: YYYY-MM-DD HH:MM:SS)
         end_date: 结束日期 (格式: YYYY-MM-DD HH:MM:SS)
         timezone: IANA 时区标识符,默认为中国上海,eg:Asia/Shanghai,Asia/Hong_Kong,Asia/Taipei,Africa/Cairo,America/New_York,Pacific/Auckland
@@ -57,24 +128,21 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
 
     #logger.info(f'A start_date: {start_datetime_utc.isoformat()} end_date: {end_datetime_utc.isoformat()} client_timezone: {client_timezone}')
 
+    sensor_id = location_id
     try:
         with db_manager.session_scope() as session:
             datas = session.query(SensorDHT22).filter(
                 SensorDHT22.created_at >= start_datetime_utc,
-                SensorDHT22.created_at <= end_datetime_utc
+                SensorDHT22.created_at <= end_datetime_utc,
+                SensorDHT22.sensor_id == sensor_id
             ).order_by(
-                SensorDHT22.created_at
+                SensorDHT22.id.desc()
             ).all()
 
             # 处理数据和时区转换
             processed_datas = []
             processed_data2 = []
             for data in datas:
-                item_dic = {
-                    'timestamps': data.created_at,
-                    'temperature': data.temperature,
-                    'humidity': data.humidity
-                }
                 item_dic = {}
                 # 处理时区转换
                 create_time_obj = data.created_at
@@ -84,29 +152,12 @@ def read_home_climate_records(start_date, end_date, timezone='Asia/Shanghai'):
                     utc_datetime = utc_timezone.localize(create_time_obj)
                 # 将utc_datetime转换到client_timezone时区
                 local_time = utc_datetime.astimezone(client_timezone)
-                # item_dic['create_date'] = local_time
 
-                # for testing
-                # item_dic['create_date'] = create_time_obj
-
-                # processed_datas.append(item_dic)
-
-                # other data formate
                 local_timestamps = local_time.strftime("%H:%M")
                 # logger.info(f"local_time: {local_time} local_timestamps: {local_timestamps}")
                 item_dic = {"time":local_timestamps, "temp": data.temperature, "hum": data.humidity}
                 processed_data2.append(item_dic)
 
-            # 提取数据到各个列表
-            # timestamps = [item['create_date'].strftime("%H:%M") for item in processed_datas]
-            # temperatures = [item['temperature'] for item in processed_datas]
-            # humanities = [item['humidity'] for item in processed_datas]
-            #
-            # return {
-            #     "timestamps": timestamps,
-            #     "temperature": temperatures,
-            #     "humidity": humanities
-            # }
             return {"records": processed_data2,
                     "timezone": client_timezone.tzname(None)}
 

@@ -13,7 +13,8 @@ from ...response import (
 from .home_db import db_manager
 from .home_model import HomeClimate, AirConditioner, HomePod, ScreenLog, Note, Fridge
 from .home_db_helper import (read_home_climate_last_records_with_minutes,
-                             read_home_climate_records_with_period, read_home_fridge_records_with_period, read_home_climate_records)
+                             read_home_climate_records_with_period, read_home_fridge_records_with_period,
+                             read_home_climate_records, read_current_climate)
 
 from ...utils import get_param, is_date_format_valid
 
@@ -285,13 +286,30 @@ def insert_home_climate_record():
     return ApiResponse.error(message=f"参数错误")
 
 @clock_bp.route('/home_climate/records', methods=['GET'])
-def get_home_climate_records():
+def get_climate_records():
     start_date = get_param('start_date', None, type_=str)
     end_date = get_param('end_date', None, type_=str)
+    location_id = get_param('location_id', None, type_=int)
     timezone = get_param('timezone', "Asia/Shanghai", type_=str)
-    if start_date and end_date:
+    if start_date and end_date and location_id:
         try:
-            result = read_home_climate_records(start_date, end_date, timezone)
+            result = read_home_climate_records(location_id, start_date, end_date, timezone)
+            return ApiResponse.success(data=result)
+        except ValueError as e:
+            return ApiResponse.error(message=f"{e}")
+        except IndexError as e:
+            return ApiResponse.error(message=f"{e}")
+        except Exception as e:
+            print(f"其他异常: {e}")
+    else:
+        return ApiResponse.error(message=f"参数错误")
+
+@clock_bp.route('/home_climate/current', methods=['GET'])
+def get_climate_current():
+    location_id = get_param('location_id', None, type_=int)
+    if location_id:
+        try:
+            result = read_current_climate(location_id)
             return ApiResponse.success(data=result)
         except ValueError as e:
             return ApiResponse.error(message=f"{e}")
