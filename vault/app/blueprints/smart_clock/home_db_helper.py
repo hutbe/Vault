@@ -54,8 +54,11 @@ def read_current_climate(location_id):
             ).first()
 
             client_timezone = pytz.timezone('Asia/Shanghai') # pytz.utc
-            dht22_date_str = dht22.created_at.astimezone(client_timezone).isoformat()
-            weather_date_str = weather.created_at.astimezone(client_timezone).isoformat()
+            utc_timezone = pytz.utc
+            dht22_date = utc_timezone.localize(dht22.created_at)
+            weather_date = utc_timezone.localize(dht22.created_at)
+            dht22_date_str = dht22_date.astimezone(client_timezone).isoformat()
+            weather_date_str = weather_date.astimezone(client_timezone).isoformat()
 
             res_dic = {"temperature": "--",
                        "humidity": "--",
