@@ -53,6 +53,10 @@ def read_current_climate(location_id):
                 WeatherRealtime.id.desc()
             ).first()
 
+            client_timezone = pytz.timezone('Asia/Shanghai') # pytz.utc
+            dht22_date_str = dht22.created_at.astimezone(client_timezone).isoformat()
+            weather_date_str = weather.created_at.astimezone(client_timezone).isoformat()
+
             res_dic = {"temperature": "--",
                        "humidity": "--",
                        "weather": "--",
@@ -62,7 +66,9 @@ def read_current_climate(location_id):
                        "outdoors_temp": "--",
                        "outdoors_feels_like": "--",
                        "outdoors_humidity": "--",
-                       "wind_deg": "--"
+                       "wind_deg": "--",
+                       "time_sensor": dht22_date_str,
+                       "time_weather": weather_date_str
                        }
             if dht22:
                 res_dic["temperature"] = dht22.temperature
