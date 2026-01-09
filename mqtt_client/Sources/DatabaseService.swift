@@ -389,9 +389,14 @@ class DatabaseService {
         // 提取可选字段
         let uniqueId = json["unique_id"] as? String ?? ""
         let batteryLevelPercent = json["battery_level_percent"] as? Double ?? 0
-        let ipAddress = json["ip_address"] as? String ?? ""
-        let macAddress = json["mac_address"] as? String ?? ""
-        let wifiSignalStrength = json["wifi_signal_strength"] as? Int ?? 0
+
+        let ip = json["ip"] as? String ?? ""
+        let mac = json["mac"] as? String ?? ""
+        let subnet = json["subnet"] as? String ?? ""
+        let dns = json["dns"] as? String ?? ""
+        let gateway = json["gateway"] as? String ?? ""
+        
+        let rssi = json["rssi"] as? Int ?? 0
         
         // 构建 extra_data JSON（可以存储 unique_id 或其他额外信息）
         var extraData: [String: Any] = [:]
@@ -399,7 +404,8 @@ class DatabaseService {
 //            extraData["unique_id"] = uniqueId
 //        }
         
-        var extraDataString: String = ""
+        // 确保总是生成有效的 JSON 字符串（即使是空对象）
+        var extraDataString: String? = nil
         if !extraData.isEmpty {
             if let extraJsonData = try? JSONSerialization.data(withJSONObject: extraData),
                let extraJsonString = String(data: extraJsonData, encoding: .utf8) {
@@ -417,8 +423,8 @@ class DatabaseService {
             total_storage_bytes, used_storage_bytes, free_storage_bytes, storage_usage_percent,
             total_memory_bytes, used_memory_bytes, free_memory_bytes, memory_usage_percent,
             uptime_seconds, reset_reason,
-            battery_level_percent, ip_address, mac_address, wifi_signal_strength, extra_data
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            battery_level_percent, ip, mac, subnet, dns, gateway, rssi, extra_data
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         return connection.query(insertSQL, [
@@ -438,11 +444,14 @@ class DatabaseService {
             MySQLData(double: memoryUsagePercent),
             MySQLData(int: uptimeSeconds),
             MySQLData(int: resetReason),
-            MySQLData(double:  batteryLevelPercent),
-            MySQLData(string: ipAddress),
-            MySQLData(string:  macAddress),
-            MySQLData(int: wifiSignalStrength),
-            MySQLData(string:  extraDataString)
+            MySQLData(double: batteryLevelPercent),
+            MySQLData(string: ip),
+            MySQLData(string: mac),
+            MySQLData(string: subnet),
+            MySQLData(string: dns),
+            MySQLData(string: gateway),
+            MySQLData(int: rssi),
+            extraDataString != nil ? (try! MySQLData(json:  extraDataString!)) : MySQLData.null
         ]).map { _ in
             self.logger.info("设备信息已保存: device_id=\(deviceId), platform=\(platform), cpu_temp=\(cpuTemperature)°C, memory_usage=\(memoryUsagePercent)%")
         }.flatMapError { error in
