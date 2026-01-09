@@ -288,6 +288,10 @@ class DatabaseService {
             logger.info("匹配2 topic: \(topic)")
             return saveSensorDHT22Data(topic: topic, payload: payload, connection: connection)
         }
+        // 匹配 device/system/+/device_info 模式
+        else if matchesMQTTPattern(topic: topic, pattern: "device/system/+/device_info") {
+            return saveSystemDeviceData(topic: topic, payload: payload, connection: connection)
+        }
         // 匹配 note/+/home 模式
         else if matchesMQTTPattern(topic: topic, pattern: "note/+/home") {
             return saveNoteData(topic: topic, payload: payload, connection: connection)
@@ -340,6 +344,109 @@ class DatabaseService {
             self.logger.info("DHT22 传感器数据已保存: sensor_id=\(sensorId), temp=\(temperature)°C, humidity=\(humidity)%")
         }.flatMapError { error in
             self.logger.error("保存 DHT22 数据失败: \(error)")
+            self.triggerReconnect()
+            return self.eventLoopGroup.next().makeFailedFuture(error)
+        }
+    }
+    
+    /// 保存 device info
+    private func saveSystemDeviceData(topic: String, payload: String, connection: MySQLConnection) -> EventLoopFuture<Void> {
+        // 从 topic 提取 device_id，例如 "device/system/2/device_info" -> "2"
+        guard let deviceIdStr = extractFromTopic(topic, pattern: "device/system/+/device_info", wildcardIndex: 0),
+              let deviceId = Int(deviceIdStr) else {
+            logger.error("无法从主题 \(topic) 提取设备ID")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+        
+        // 解析 JSON payload
+        guard let jsonData = payload.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+            logger.error("设备信息数据格式错误:  \(payload)")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+        
+        // 提取必需字段
+        guard let createdAtISO = json["created_at"] as? String,
+              let osVersion = json["os_version"] as? String else {
+            logger.error("设备信息数据缺少必需字段:  \(payload)")
+            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
+        }
+        
+        let platform = json["platform"] as? String ?? ""
+        let cpuFrequencyMhz = json["cpu_frequency_mhz"] as?  Int  ?? 0
+        let cpuTemperature = json["cpu_temperature"] as? Double ?? 0
+        let totalStorageBytes = json["total_storage_bytes"] as? Int ?? 0
+        let usedStorageBytes = json["used_storage_bytes"] as? Int ?? 0
+        let freeStorageBytes = json["free_storage_bytes"] as?  Int ?? 0
+        let storageUsagePercent = json["storage_usage_percent"] as? Double ?? 0
+        let totalMemoryBytes = json["total_memory_bytes"] as? Int ?? 0
+        let usedMemoryBytes = json["used_memory_bytes"] as? Int ?? 0
+        let freeMemoryBytes = json["free_memory_bytes"] as? Int ?? 0
+        let memoryUsagePercent = json["memory_usage_percent"] as? Double ?? 0
+        let uptimeSeconds = json["uptime_seconds"] as? Int ?? 0
+        let resetReason = json["reset_reason"] as? Int ?? 0
+        
+        // 提取可选字段
+        let uniqueId = json["unique_id"] as? String ?? ""
+        let batteryLevelPercent = json["battery_level_percent"] as? Double ?? 0
+        let ipAddress = json["ip_address"] as? String ?? ""
+        let macAddress = json["mac_address"] as? String ?? ""
+        let wifiSignalStrength = json["wifi_signal_strength"] as? Int ?? 0
+        
+        // 构建 extra_data JSON（可以存储 unique_id 或其他额外信息）
+        var extraData: [String: Any] = [:]
+//        if let uniqueId = uniqueId {
+//            extraData["unique_id"] = uniqueId
+//        }
+        
+        var extraDataString: String = ""
+        if !extraData.isEmpty {
+            if let extraJsonData = try? JSONSerialization.data(withJSONObject: extraData),
+               let extraJsonString = String(data: extraJsonData, encoding: .utf8) {
+                extraDataString = extraJsonString
+            }
+        }
+        
+        // 使用当前时间作为 timestamp
+        let timestamp = Date()
+        
+        let insertSQL = """
+        INSERT INTO system_device_snapshots (
+            device_id, timestamp, platform, os_version, 
+            cpu_frequency_mhz, cpu_temperature, 
+            total_storage_bytes, used_storage_bytes, free_storage_bytes, storage_usage_percent,
+            total_memory_bytes, used_memory_bytes, free_memory_bytes, memory_usage_percent,
+            uptime_seconds, reset_reason,
+            battery_level_percent, ip_address, mac_address, wifi_signal_strength, extra_data
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        
+        return connection.query(insertSQL, [
+            MySQLData(int: deviceId),
+            MySQLData(date: timestamp),
+            MySQLData(string: platform),
+            MySQLData(string: osVersion),
+            MySQLData(int: cpuFrequencyMhz),
+            MySQLData(double: cpuTemperature),
+            MySQLData(int: totalStorageBytes),
+            MySQLData(int: usedStorageBytes),
+            MySQLData(int: freeStorageBytes),
+            MySQLData(double: storageUsagePercent),
+            MySQLData(int: totalMemoryBytes),
+            MySQLData(int: usedMemoryBytes),
+            MySQLData(int: freeMemoryBytes),
+            MySQLData(double: memoryUsagePercent),
+            MySQLData(int: uptimeSeconds),
+            MySQLData(int: resetReason),
+            MySQLData(double:  batteryLevelPercent),
+            MySQLData(string: ipAddress),
+            MySQLData(string:  macAddress),
+            MySQLData(int: wifiSignalStrength),
+            MySQLData(string:  extraDataString)
+        ]).map { _ in
+            self.logger.info("设备信息已保存: device_id=\(deviceId), platform=\(platform), cpu_temp=\(cpuTemperature)°C, memory_usage=\(memoryUsagePercent)%")
+        }.flatMapError { error in
+            self.logger.error("保存设备信息失败:  \(error)")
             self.triggerReconnect()
             return self.eventLoopGroup.next().makeFailedFuture(error)
         }

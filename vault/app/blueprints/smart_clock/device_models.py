@@ -132,9 +132,13 @@ class SystemDeviceSnapshot(Base):
     battery_level_percent = Column(Float, nullable=True)
 
     # 网络信息
-    ip_address = Column(String(45), nullable=True)  # IPv6最长45字符
-    mac_address = Column(String(17), nullable=True, index=True)
-    wifi_signal_strength = Column(Integer, nullable=True)
+    ip = Column(String(45), nullable=True)  # IPv6最长45字符
+    mac = Column(String(17), nullable=True, index=True)
+    subnet = Column(String(45), nullable=True, index=True)
+    dns = Column(String(45), nullable=True, index=True)
+    gateway = Column(String(45), nullable=True, index=True)
+
+    rssi = Column(Integer, nullable=True)
 
     # 扩展字段（MySQL 5.7.8+ 支持JSON类型）
     extra_data = Column(JSON, nullable=True)
@@ -179,9 +183,12 @@ class SystemDeviceSnapshot(Base):
             'reset_reason': self.reset_reason,
             'reset_reason_name': self.reset_reason_name,
             'battery_level_percent': self.battery_level_percent,
-            'ip_address': self.ip_address,
-            'mac_address': self.mac_address,
-            'wifi_signal_strength': self.wifi_signal_strength,
+            'ip': self.ip,
+            'mac': self.mac,
+            'subnet': self.subnet,
+            'dns': self.dns,
+            'gateway': self.gateway,
+            'rssi': self.rssi,
             'extra_data': self.extra_data
         }
 
