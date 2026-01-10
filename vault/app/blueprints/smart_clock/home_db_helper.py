@@ -2,6 +2,7 @@
 from .home_db import db_manager
 from .home_model import HomeClimate, Fridge, SensorDHT22
 from .weather_models import WeatherRealtime, WeatherForecast
+from .device_models import SystemDeviceSnapshot
 
 import pytz
 
@@ -31,47 +32,62 @@ def read_current_climate(location_id):
     # current_utc = dt.replace(tzinfo=pytz.utc)
 
     # 获取 30 分钟前的 UTC 时间
-    minutes_ago = current_utc - timedelta(minutes=30)
+    minutes_ago_utc = current_utc - timedelta(minutes=30)
 
     sensor_id = location_id
+    device_id = 2
     city_id = 6958812
+
     try:
         with db_manager.session_scope() as session:
             dht22 = session.query(SensorDHT22).filter(
-                SensorDHT22.created_at >= minutes_ago,
+                SensorDHT22.created_at >= minutes_ago_utc,
                 SensorDHT22.created_at <= current_utc,
                 SensorDHT22.sensor_id == sensor_id
             ).order_by(
-                SensorDHT22.id.desc()
+                SensorDHT22.created_at.desc()
             ).first()
 
             weather = session.query(WeatherRealtime).filter(
-                WeatherRealtime.created_at >= minutes_ago,
+                WeatherRealtime.created_at >= minutes_ago_utc,
                 WeatherRealtime.created_at <= current_utc,
                 WeatherRealtime.city_id == city_id
             ).order_by(
-                WeatherRealtime.id.desc()
+                WeatherRealtime.created_at.desc()
+            ).first()
+
+            sys_device = session.query(SystemDeviceSnapshot).filter(
+                SystemDeviceSnapshot.timestamp >= minutes_ago_utc,
+                SystemDeviceSnapshot.timestamp <= current_utc,
+                SystemDeviceSnapshot.device_id == device_id
+            ).order_by(
+                SystemDeviceSnapshot.timestamp.desc()
             ).first()
 
             client_timezone = pytz.timezone('Asia/Shanghai') # pytz.utc
             utc_timezone = pytz.utc
-            dht22_date = utc_timezone.localize(dht22.created_at)
-            weather_date = utc_timezone.localize(dht22.created_at)
-            dht22_date_str = dht22_date.astimezone(client_timezone).isoformat()
-            weather_date_str = weather_date.astimezone(client_timezone).isoformat()
 
-            res_dic = {"temperature": "--",
-                       "humidity": "--",
-                       "weather": "--",
-                       "weather_code": "--",
-                       "weather_des": "--",
-                       "weather_icon": "--",
-                       "outdoors_temp": "--",
-                       "outdoors_feels_like": "--",
-                       "outdoors_humidity": "--",
-                       "wind_deg": "--",
+            dht22_date = utc_timezone.localize(dht22.created_at) if dht22 else None
+            weather_date = utc_timezone.localize(weather.created_at) if weather else None
+            device_date = utc_timezone.localize(sys_device.created_at) if sys_device else None
+            dht22_date_str = dht22_date.astimezone(client_timezone).isoformat() if dht22_date else  ""
+            weather_date_str = weather_date.astimezone(client_timezone).isoformat() if weather_date else  ""
+            device_date_str = device_date.astimezone(client_timezone).isoformat() if device_date else  ""
+
+            res_dic = {"temperature": "",
+                       "humidity": "",
+                       "weather": "",
+                       "weather_code": "",
+                       "weather_des": "",
+                       "weather_icon": "",
+                       "outdoors_temp": "",
+                       "outdoors_feels_like": "",
+                       "outdoors_humidity": "",
+                       "wind_deg": "",
                        "time_sensor": dht22_date_str,
-                       "time_weather": weather_date_str
+                       "time_weather": weather_date_str,
+                       "time_system_device": device_date_str,
+                       "cup_temp": ""
                        }
             if dht22:
                 res_dic["temperature"] = dht22.temperature
@@ -88,6 +104,12 @@ def read_current_climate(location_id):
                 res_dic["outdoors_feels_like"] = weather.feels_like
                 res_dic["outdoors_humidity"] = weather.humidity
                 res_dic["wind_deg"] = weather.wind_deg
+
+            if sys_device:
+                res_dic["cup_temp"] = sys_device.cpu_temperature
+                res_dic["memory_usage_percent"] = sys_device.memory_usage_percent
+                res_dic["storage_usage_percent"] = sys_device.storage_usage_percent
+                res_dic["uptime_seconds"] = sys_device.uptime_seconds
 
             return res_dic
     except Exception as e:
@@ -145,7 +167,7 @@ def read_home_climate_records(location_id, start_date, end_date, timezone='Asia/
                 SensorDHT22.created_at <= end_datetime_utc,
                 SensorDHT22.sensor_id == sensor_id
             ).order_by(
-                SensorDHT22.id.desc()
+                SensorDHT22.created_at
             ).all()
 
             # 处理数据和时区转换
