@@ -69,7 +69,7 @@ def read_current_climate(location_id):
 
             dht22_date = utc_timezone.localize(dht22.created_at) if dht22 else None
             weather_date = utc_timezone.localize(weather.created_at) if weather else None
-            device_date = utc_timezone.localize(sys_device.created_at) if sys_device else None
+            device_date = utc_timezone.localize(sys_device.timestamp) if sys_device else None
             dht22_date_str = dht22_date.astimezone(client_timezone).isoformat() if dht22_date else  ""
             weather_date_str = weather_date.astimezone(client_timezone).isoformat() if weather_date else  ""
             device_date_str = device_date.astimezone(client_timezone).isoformat() if device_date else  ""
