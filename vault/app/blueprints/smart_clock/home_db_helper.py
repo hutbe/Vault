@@ -210,8 +210,17 @@ def read_home_climate_last_records_with_minutes(minutes):
             humidities = [record.humidity for record in records]
             cup_temps = [record.cup_temp for record in records]
             cpu_used_rates = [record.cpu_used_rate for record in records]
-            createDates = [record.create_date.strftime("%H:%M") for record in records]
+            # createDates = [record.create_date.strftime("%H:%M") for record in records]
             outdoors_temp = [record.outdoors_temp for record in records]
+
+            utc_timezone = pytz.utc
+            shanghai_tz = pytz.timezone('Asia/Shanghai')
+            createDates = [
+                record.create_date.replace(tzinfo=utc_timezone)
+                .astimezone(shanghai_tz)
+                .strftime("%H:%M")
+                for record in records
+            ]
 
             temperatures.reverse()
             humidities.reverse()
