@@ -8,7 +8,7 @@ from home_db import db_manager
 
 def request_current_weather_data():
     # 创建API实例
-    chosen_api_key = random.choice([API_KEY, API_KEY2, API_KEY3])
+    chosen_api_key = random.choice([API_KEY2, API_KEY3])
     api = WeatherAPI(chosen_api_key)
 
     # 获取天气
