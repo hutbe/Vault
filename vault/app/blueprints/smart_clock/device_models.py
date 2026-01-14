@@ -198,11 +198,11 @@ if __name__ == '__main__':
     # 方式1: 使用 pymysql（纯Python实现）
     # pip install pymysql
     DB_CONFIG = {
-        'host': 'xxxxxx',
+        'host': '127.0.0.1',
         'port': 3306,
         'user': 'root',
-        'password': 'xxxxx',
-        'database': 'xxxxxx',
+        'password': 'xxxxxx',
+        'database': 'xxxxx',
         'charset': 'utf8mb4'
     }
 
@@ -244,13 +244,75 @@ if __name__ == '__main__':
         # 添加 Raspberry Pi Pico W 设备
         pico_device = SystemDevice(
             unique_id='e6632c8593745230',
-            device_type=0,
+            device_type=1,
             device_name='Raspberry Pi Pico W',
             description='温度监控节点',
             location='实验室A',
             group_name='物联网传感器'
         )
+
+        pi_device = SystemDevice(
+            unique_id='1000000009454311',
+            device_type=2,
+            device_name='Raspberry Pi 4 Model B Rev 1.4',
+            description='my first raspberry pi',
+            location='with me',
+            group_name='my devices'
+        )
+
+        esp32_device = SystemDevice(
+            unique_id='D83BDAE410F8',
+            device_type=3,
+            device_name='MakerGO ESP32 C3 SuperMini',
+            description='my first esp32',
+            location='Its mine',
+            group_name='my devices'
+        )
+        
+        device_1 = SystemDevice(
+            unique_id='change_to_unique_id_1',
+            device_type=4,
+            device_name='for future use',
+            description='',
+            location='',
+            group_name=''
+        )
+
+        device_2 = SystemDevice(
+            unique_id='change_to_unique_id_2',
+            device_type=6,
+            device_name='for future use',
+            description='',
+            location='',
+            group_name=''
+        )
+
+        device_3 = SystemDevice(
+            unique_id='change_to_unique_id_3',
+            device_type=7,
+            device_name='for future use',
+            description='',
+            location='',
+            group_name=''
+        )
+
+        device_4 = SystemDevice(
+            unique_id='change_to_unique_id_4',
+            device_type=8,
+            device_name='for future use',
+            description='',
+            location='',
+            group_name=''
+        )
+
+
+        session.add(pi_device)
         session.add(pico_device)
+        session.add(esp32_device)
+        session.add(device_1)
+        session.add(device_2)
+        session.add(device_3)
+        session.add(device_4)
         session.commit()
 
         # 添加快照数据
@@ -285,10 +347,10 @@ if __name__ == '__main__':
             print(f"{device.device_name} ({device.device_type_name}) - 最后在线: {device.last_seen}")
 
         print("\n=== Pico W 的所有快照 ===")
-        pico_snapshots = session.query(SystemDeviceSnapshot).filter_by(device_id=pico_device.id).all()
-        for snapshot in pico_snapshots:
-            print(
-                f"时间: {snapshot.timestamp}, CPU温度:  {snapshot.cpu_temperature}°C, 内存使用:  {snapshot.memory_usage_percent}%")
+        # pico_snapshots = session.query(SystemDeviceSnapshot).filter_by(device_id=pico_device.id).all()
+        # for snapshot in pico_snapshots:
+        #     print(
+        #         f"时间: {snapshot.timestamp}, CPU温度:  {snapshot.cpu_temperature}°C, 内存使用:  {snapshot.memory_usage_percent}%")
 
     except Exception as e:
         print(f"错误: {e}")
