@@ -104,6 +104,7 @@ class SystemDeviceSnapshot(Base):
     }
     id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(Integer, ForeignKey('system_devices.id', ondelete='CASCADE', name='fk_system_device_snapshot_device'), nullable=False, index=True)
+    created_at_iso = Column(String(33), nullable=True)
     timestamp = Column(DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
 
     # 系统信息

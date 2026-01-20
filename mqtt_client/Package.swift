@@ -15,6 +15,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.62.0"),
         // 日志
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
+        // SwiftyJSON
+        .package(url: "https://github.com/SwiftyJSON/SwiftyJSON.git", from: "4.0.0"),
     ],
     targets: [
         . executableTarget(
@@ -24,6 +26,7 @@ let package = Package(
                 .product(name: "MySQLNIO", package: "mysql-nio"),
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "SwiftyJSON", package: "SwiftyJSON"),
             ]
         ),
     ]

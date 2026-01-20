@@ -2,6 +2,7 @@ import Foundation
 import MySQLNIO
 import NIO
 import Logging
+import SwiftyJSON
 
 class DatabaseService {
     private let logger = Logger(label: "com.mqttserver.database")
@@ -312,6 +313,8 @@ class DatabaseService {
         }
         
         // 解析 JSON payload
+        let json = JSON(parseJSON: payload)
+        
         guard let jsonData = payload.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
               let temperature = json["temperature"] as? Double,
@@ -359,44 +362,40 @@ class DatabaseService {
         }
         
         // 解析 JSON payload
-        guard let jsonData = payload.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
-            logger.error("设备信息数据格式错误:  \(payload)")
-            return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
-        }
+        let json = JSON(parseJSON: payload)
         
         // 提取必需字段
-        guard let createdAtISO = json["created_at"] as? String,
-              let osVersion = json["os_version"] as? String else {
+        guard let createdAtISO = json["created_at"].string,
+              let osVersion = json["unique_id"].string else {
             logger.error("设备信息数据缺少必需字段:  \(payload)")
             return saveToDefaultTable(topic: topic, payload: payload, connection: connection)
         }
         
-        let platform = json["platform"] as? String ?? ""
-        let cpuFrequencyMhz = json["cpu_frequency_mhz"] as?  Int  ?? 0
-        let cpuTemperature = json["cpu_temperature"] as? Double ?? 0
-        let totalStorageBytes = json["total_storage_bytes"] as? Int ?? 0
-        let usedStorageBytes = json["used_storage_bytes"] as? Int ?? 0
-        let freeStorageBytes = json["free_storage_bytes"] as?  Int ?? 0
-        let storageUsagePercent = json["storage_usage_percent"] as? Double ?? 0
-        let totalMemoryBytes = json["total_memory_bytes"] as? Int ?? 0
-        let usedMemoryBytes = json["used_memory_bytes"] as? Int ?? 0
-        let freeMemoryBytes = json["free_memory_bytes"] as? Int ?? 0
-        let memoryUsagePercent = json["memory_usage_percent"] as? Double ?? 0
-        let uptimeSeconds = json["uptime_seconds"] as? Int ?? 0
-        let resetReason = json["reset_reason"] as? Int ?? 0
+        let platform = json["platform"].stringValue
+        let cpuFrequencyMhz = json["cpu_frequency_mhz"].intValue
+        let cpuTemperature = json["cpu_temperature"].doubleValue
+        let totalStorageBytes = json["total_storage_bytes"].intValue
+        let usedStorageBytes = json["used_storage_bytes"].intValue
+        let freeStorageBytes = json["free_storage_bytes"].intValue
+        let storageUsagePercent = json["storage_usage_percent"].doubleValue
+        let totalMemoryBytes = json["total_memory_bytes"].intValue
+        let usedMemoryBytes = json["used_memory_bytes"].intValue
+        let freeMemoryBytes = json["free_memory_bytes"].intValue
+        let memoryUsagePercent = json["memory_usage_percent"].doubleValue
+        let uptimeSeconds = json["uptime_seconds"].intValue
+        let resetReason = json["reset_reason"].intValue
         
         // 提取可选字段
-        let uniqueId = json["unique_id"] as? String ?? ""
-        let batteryLevelPercent = json["battery_level_percent"] as? Double ?? 0
+        let uniqueId = json["unique_id"].stringValue
+        let batteryLevelPercent = json["battery_level_percent"].doubleValue
 
-        let ip = json["ip"] as? String ?? ""
-        let mac = json["mac"] as? String ?? ""
-        let subnet = json["subnet"] as? String ?? ""
-        let dns = json["dns"] as? String ?? ""
-        let gateway = json["gateway"] as? String ?? ""
+        let ip = json["ip"].stringValue
+        let mac = json["mac"].stringValue
+        let subnet = json["subnet"].stringValue
+        let dns = json["dns"].stringValue
+        let gateway = json["gateway"].stringValue
         
-        let rssi = json["rssi"] as? Int ?? 0
+        let rssi = json["rssi"].intValue
         
         // 构建 extra_data JSON（可以存储 unique_id 或其他额外信息）
         var extraData: [String: Any] = [:]
@@ -418,17 +417,18 @@ class DatabaseService {
         
         let insertSQL = """
         INSERT INTO system_device_snapshots (
-            device_id, timestamp, platform, os_version, 
+            device_id, created_at_iso, timestamp, platform, os_version, 
             cpu_frequency_mhz, cpu_temperature, 
             total_storage_bytes, used_storage_bytes, free_storage_bytes, storage_usage_percent,
             total_memory_bytes, used_memory_bytes, free_memory_bytes, memory_usage_percent,
             uptime_seconds, reset_reason,
             battery_level_percent, ip, mac, subnet, dns, gateway, rssi, extra_data
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         
         return connection.query(insertSQL, [
             MySQLData(int: deviceId),
+            MySQLData(string: createdAtISO),
             MySQLData(date: timestamp),
             MySQLData(string: platform),
             MySQLData(string: osVersion),
