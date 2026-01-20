@@ -4,7 +4,8 @@
 # 构建阶段
 # ============================================
 # FROM swift:5.9 as builder
-# swift:6.2-bookworm-slim as builder
+#swift:6.2-bookworm-slim as builder
+# FROM swift:5.10-bookworm AS builder
 FROM swift:6.2-bookworm AS builder
 
 # 设置工作目录
@@ -13,7 +14,10 @@ WORKDIR /app
 # 复制 Package.swift 和 Package.resolved（如果存在）
 COPY Package.swift Package.resolved* ./
 
-# 解析依赖（利用 Docker 缓存层）
+# 1. 安装编译环境（build-essential）
+# RUN apt-get update && apt-get install -y build-essential
+
+# 2. 解析 Swift 依赖
 RUN swift package resolve
 
 # 复制源代码

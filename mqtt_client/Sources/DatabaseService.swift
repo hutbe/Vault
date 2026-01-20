@@ -2,7 +2,6 @@ import Foundation
 import MySQLNIO
 import NIO
 import Logging
-import SwiftyJSON
 
 class DatabaseService {
     private let logger = Logger(label: "com.mqttserver.database")

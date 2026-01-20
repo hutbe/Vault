@@ -35,7 +35,7 @@ def read_current_climate(location_id):
     minutes_ago_utc = current_utc - timedelta(minutes=30)
 
     sensor_id = location_id
-    device_id = location_id 
+    device_id = location_id
     city_id = 6958812
 
     # location_id 1 pi 客厅对应device_id为1
