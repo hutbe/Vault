@@ -12,7 +12,9 @@ server {
     ssl_session_timeout 1h;                 #缓存有效期
     ssl_session_cache   shared:SSL:10m;
     ssl_protocols       TLSv1.2 TLSv1.3;    #安全链接可选的加密协议
+    # ssl_protocols TLSv1 TLSv1.1 TLSv1.2;       # 支持旧协议
     ssl_ciphers         HIGH:!aNULL:!MD5;   #加密算法
+    # ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:...'; # 兼容性更好的加密套件
     ssl_prefer_server_ciphers on;           #优先使用服务器端的加密算法
 
     # 安全头片段

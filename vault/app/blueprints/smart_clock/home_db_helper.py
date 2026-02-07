@@ -38,9 +38,9 @@ def read_current_climate(location_id):
     device_id = location_id
     city_id = 6958812
 
-    # location_id 1 pi 客厅对应device_id为1
+    # location_id 1 pi 客厅对应device_id为1 及 10
     # location_id 2 和 3 共用同一个设备, pico 冰箱 
-    if location_id in (2, 3):
+    if location_id in (2, 3, 10):
         device_id = 2
     elif location_id == 1:
         device_id = 1
