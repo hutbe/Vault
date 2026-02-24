@@ -30,6 +30,7 @@ class Quote(Base):
     source = Column(String(255), nullable=True)
     tags = Column(String(500), default='')
     authors = Column(String(255), default='')
+    is_custom = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), comment='记录创建时间')
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), comment='记录时间')
 
