@@ -16,6 +16,7 @@ error_exit() {
 required_vars=(
     "SERVER_USER" "SERVER_IP" "SERVER_BACKUP_PATH"
     "LOCAL_DB_HOST" "LOCAL_DB_USER" "LOCAL_DB_PASS"
+    "SERVER_SSH_PORT"
 )
 for var in "${required_vars[@]}"; do
     if [ -z "${!var}" ]; then
@@ -25,7 +26,7 @@ done
 
 echo "正在查找最新备份..."
 # 获取最新的备份文件
-LATEST_BACKUP=$(ssh ${SERVER_USER}@${SERVER_IP} "ls -t ${SERVER_BACKUP_PATH}/*.sql.gz 2>/dev/null | head -1") || error_exit "无法获取备份文件列表"
+LATEST_BACKUP=$(ssh -p ${SERVER_SSH_PORT} ${SERVER_USER}@${SERVER_IP} "ls -t ${SERVER_BACKUP_PATH}/*.sql.gz 2>/dev/null | head -1") || error_exit "无法获取备份文件列表"
 
 if [ -z "$LATEST_BACKUP" ]; then
     error_exit "未找到备份文件"
