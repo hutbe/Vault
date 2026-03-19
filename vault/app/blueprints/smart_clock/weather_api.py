@@ -12,6 +12,15 @@ class WeatherAPI:
         self.api_key = api_key
         self.base_url = "https://api.openweathermap.org/data/2.5"
 
+    # 显示前4位，后4位，其余用*代替
+    def mask_api_key(self):
+        key = self.api_key
+        if len(key) <= 8:
+            return '*' * len(key)
+
+        # 前4位 + * + 后4位
+        return key[:4] + '*' * (len(key) - 8) + key[-4:]
+
     def _request(self, endpoint, params):
         """
         通用请求方法
@@ -38,16 +47,16 @@ class WeatherAPI:
             return result
 
         except urllib.error.HTTPError as e:
-            print(f"{formatted_string}-HTTP错误: {e.code} - {e.reason}")
+            print(f"{formatted_string}-api_key: {self.mask_api_key} - HTTP错误: {e.code} - {e.reason} ")
             return None
         except urllib.error.URLError as e:
-            print(f"{formatted_string}-网络错误: {e.reason}")
+            print(f"{formatted_string}-api_key: {self.mask_api_key} - 网络错误: {e.reason}")
             return None
         except json.JSONDecodeError:
-            print("{formatted_string}-JSON解析失败")
+            print(f"{formatted_string}-api_key: {self.mask_api_key} - JSON解析失败")
             return None
         except Exception as e:
-            print(f"{formatted_string}-请求失败: {e}")
+            print(f"{formatted_string}-api_key: {self.mask_api_key} - 请求失败: {e} ")
             return None
 
     def get_current_weather(self, lat, lon, lang='zh', units='metric'):

@@ -282,7 +282,11 @@ def should_fetch_forecast():
 def main():
     # 每3小时获取一次天气预报数据
     if should_fetch_forecast():
-        print("正在获取天气预报数据...")
+
+        current_datetime = datetime.now()
+        formatted_string = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        print(f"{formatted_string}-request")
+
         request_weather_forecast_data()
 
     request_current_weather_data()

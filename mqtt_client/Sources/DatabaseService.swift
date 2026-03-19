@@ -283,9 +283,8 @@ class DatabaseService {
         }
         
         // 匹配 sensor/dht22/+/data 模式
-        logger.info("匹配 sensor/dht22/+/data 模式 topic: \(topic)")
+        // logger.info("匹配 sensor/dht22/+/data 模式 topic: \(topic)")
         if matchesMQTTPattern(topic: topic, pattern: "sensor/dht22/+/data") {
-            logger.info("匹配2 topic: \(topic)")
             return saveSensorDHT22Data(topic: topic, payload: payload, connection: connection)
         }
         // 匹配 device/system/+/device_info 模式
@@ -452,7 +451,7 @@ class DatabaseService {
             MySQLData(int: rssi),
             extraDataString != nil ? (try! MySQLData(json:  extraDataString!)) : MySQLData.null
         ]).map { _ in
-            self.logger.info("设备信息已保存: device_id=\(deviceId), platform=\(platform), cpu_temp=\(cpuTemperature)°C, memory_usage=\(memoryUsagePercent)%")
+            // self.logger.info("设备信息已保存: device_id=\(deviceId), platform=\(platform), cpu_temp=\(cpuTemperature)°C, memory_usage=\(memoryUsagePercent)%")
         }.flatMapError { error in
             self.logger.error("保存设备信息失败:  \(error)")
             self.triggerReconnect()
