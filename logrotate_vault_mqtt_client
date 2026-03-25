@@ -1,0 +1,17 @@
+# /home/hut/vault_docker/mqtt_client/logs/server.log
+/home/hut/vault_docker/mqtt_client/logs/server.log {
+    su hut hut
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 hut hut
+    dateext
+    dateformat -%Y%m%d
+    sharedscripts
+    postrotate
+        echo "Log rotation completed at $(date)" >> /var/log/logrotate_vault_mqtt_client.log
+    endscript
+}

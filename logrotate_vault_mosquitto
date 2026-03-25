@@ -1,0 +1,17 @@
+# /home/hut/vault_docker/mosquitto/log/mosquitto.log
+/home/hut/vault_docker/mosquitto/log/mosquitto.log {
+    su root root
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 root root
+    dateext
+    dateformat -%Y%m%d
+    sharedscripts
+    postrotate
+        echo "Log rotation completed at $(date)" >> /var/log/logrotate_vault_mosquitto.log
+    endscript
+}

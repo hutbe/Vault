@@ -37,7 +37,6 @@ services:
     networks:
       - app-network
 
-
   mariadb:
     image: mariadb:latest
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never
