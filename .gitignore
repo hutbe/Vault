@@ -60,7 +60,7 @@ nginx/log/
 # 临时文件和日志
 *.tmp
 *.log
-
+*.log-*
 
 # swift 和 Xcode相关
 .build/
