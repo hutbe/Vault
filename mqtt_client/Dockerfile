@@ -49,7 +49,7 @@ LABEL maintainer="Hut <strongwindcarrywater@gmail.com>" \
 VOLUME ["/app/logs"]
 
 # 创建非 root 用户
-RUN useradd -m -s /bin/bash mqtt_client_user
+RUN useradd -u 1100 -m -s /bin/bash mqtt_client
 
 # 设置工作目录
 WORKDIR /app
