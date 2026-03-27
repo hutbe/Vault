@@ -66,10 +66,10 @@ COPY --from=builder /app/.build/release/MQTTServerApp* /app/
 # COPY --from=builder /app/Resources /app/Resources
 
 # 修改文件所有者
-RUN chown -R mqtt_client_user:mqtt_client_user /app
+RUN chown -R mqtt_client:mqtt_client /app
 
 # 切换到非 root 用户
-USER mqtt_client_user
+USER mqtt_client
 
 # 暴露端口（根据你的应用实际端口修改）
 EXPOSE 8020

@@ -2,7 +2,7 @@
 set -e
 
 IMAGE_NAME="stoull/mqtt_client"
-TAG="latest"
+TAG="0.1"
 CACHE_DIR="${HOME}/buildx-cache/mqtt_client"
 
 # 确保缓存目录存在
@@ -18,6 +18,7 @@ echo "Building and pushing multi-arch image..."
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   -t $IMAGE_NAME:$TAG \
+  -t $IMAGE_NAME:latest \
   --push .
 
 # 方法B：同时构建本地可用的arm64版本

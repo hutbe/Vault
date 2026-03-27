@@ -2,7 +2,7 @@
 set -e
 
 IMAGE_NAME="stoull/vault-nginx"
-TAG="latest"
+TAG="0.1"
 CACHE_DIR="${HOME}/buildx-cache/vault-nginx"
 
 # 确保缓存目录存在
@@ -28,6 +28,7 @@ echo "Building local arm64 version..."
 docker buildx build \
   --platform linux/arm64 \
   -t $IMAGE_NAME:$TAG-arm64 \
+  -t $IMAGE_NAME:latest \
   --load .
 
 echo "Done!"
