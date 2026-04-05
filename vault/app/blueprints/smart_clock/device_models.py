@@ -26,6 +26,25 @@ class ResetType(enum.IntEnum):
     WDT_RESET = 1 # 看门狗复位
     OTHER_RESET = 9
 
+class Sensors(Base):
+    """设备基础信息表"""
+    __tablename__ = 'sensors'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sensor_type = Column(Integer, nullable=False, index=True, comment='设备类型:  1=dht22, 2=SHT20.. .')
+    device_name = Column(String(191), nullable=True)
+    description = Column(String(500), nullable=True)
+
+    # 设备位置/分组
+    location = Column(String(191), nullable=True)
+    group_name = Column(String(100), nullable=True, index=True)
+
+    # 时间戳
+    created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+    last_seen = Column(DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
+
+    # 设备状态
+    is_active = Column(Integer, default=1)  # 1=活跃, 0=停用
+
 class SystemDevice(Base):
     """设备基础信息表"""
     __tablename__ = 'system_devices'
