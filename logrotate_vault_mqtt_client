@@ -12,6 +12,9 @@
     dateformat -%Y%m%d
     sharedscripts
     postrotate
+        # 核心步骤：将新创建的日志文件属主改回容器内用户的 UID
+        # 假设容器内用户 UID 为 1100，GID 为 1100
+        chown 1100:1100 //home/hut/vault_docker/mqtt_client/logs/server.log
         echo "Log rotation completed at $(date)" >> /var/log/logrotate_vault_mqtt_client.log
     endscript
 }
