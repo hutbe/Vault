@@ -1,6 +1,6 @@
 
 from .home_db import db_manager
-from .home_model import HomeClimate, Fridge, SensorDHT22
+from .home_model import HomeClimate, Fridge, SensorDHT22, EnvironmentReadings
 from .weather_models import WeatherRealtime, WeatherForecast
 from .device_models import SystemDeviceSnapshot
 
@@ -34,7 +34,6 @@ def read_current_climate(location_id):
     # 获取 30 分钟前的 UTC 时间
     minutes_ago_utc = current_utc - timedelta(minutes=30)
 
-    sensor_id = location_id
     device_id = location_id
     city_id = 6958812
 
@@ -51,12 +50,12 @@ def read_current_climate(location_id):
 
     try:
         with db_manager.session_scope() as session:
-            dht22 = session.query(SensorDHT22).filter(
-                SensorDHT22.created_at >= minutes_ago_utc,
-                SensorDHT22.created_at <= current_utc,
-                SensorDHT22.sensor_id == sensor_id
+            dht22 = session.query(EnvironmentReadings).filter(
+                EnvironmentReadings.created_at >= minutes_ago_utc,
+                EnvironmentReadings.created_at <= current_utc,
+                EnvironmentReadings.location_id == location_id
             ).order_by(
-                SensorDHT22.created_at.desc()
+                EnvironmentReadings.created_at.desc()
             ).first()
 
             weather = session.query(WeatherRealtime).filter(
@@ -127,7 +126,7 @@ def read_current_climate(location_id):
         raise ValueError(f"查询错误{e}")
 
 
-def read_home_climate_records(location_id, start_date, end_date, timezone='Asia/Shanghai'):
+def read_home_climate_records(location_id, start_date, end_date, timezone='Asia/Shanghai', sensor_type=None):
     """
     Args:
         location_id: 位置id
@@ -170,15 +169,18 @@ def read_home_climate_records(location_id, start_date, end_date, timezone='Asia/
 
     #logger.info(f'A start_date: {start_datetime_utc.isoformat()} end_date: {end_datetime_utc.isoformat()} client_timezone: {client_timezone}')
 
-    sensor_id = location_id
     try:
         with db_manager.session_scope() as session:
-            datas = session.query(SensorDHT22).filter(
-                SensorDHT22.created_at >= start_datetime_utc,
-                SensorDHT22.created_at <= end_datetime_utc,
-                SensorDHT22.sensor_id == sensor_id
-            ).order_by(
-                SensorDHT22.created_at
+            query = session.query(EnvironmentReadings).filter(
+                EnvironmentReadings.created_at >= start_datetime_utc,
+                EnvironmentReadings.created_at <= end_datetime_utc,
+                EnvironmentReadings.location_id == location_id
+            )
+            if sensor_type is not None:
+                query = query.filter(EnvironmentReadings.sensor_type == sensor_type)
+
+            datas = query.order_by(
+                EnvironmentReadings.created_at
             ).all()
 
             # 处理数据和时区转换
@@ -192,6 +194,8 @@ def read_home_climate_records(location_id, start_date, end_date, timezone='Asia/
                 if create_time_obj.tzinfo is None:
                     # 给create_time_obj添加时区信息
                     utc_datetime = utc_timezone.localize(create_time_obj)
+                else:
+                    utc_datetime = create_time_obj.astimezone(utc_timezone)
                 # 将utc_datetime转换到client_timezone时区
                 local_time = utc_datetime.astimezone(client_timezone)
 

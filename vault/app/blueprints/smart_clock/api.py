@@ -290,10 +290,17 @@ def get_climate_records():
     start_date = get_param('start_date', None, type_=str)
     end_date = get_param('end_date', None, type_=str)
     location_id = get_param('location_id', None, type_=int)
+    sensor_type = get_param('sensor_type', None, type_=int)
     timezone = get_param('timezone', "Asia/Shanghai", type_=str)
     if start_date and end_date and location_id:
         try:
-            result = read_home_climate_records(location_id, start_date, end_date, timezone)
+            result = read_home_climate_records(
+                location_id,
+                start_date,
+                end_date,
+                timezone,
+                sensor_type=sensor_type
+            )
             return ApiResponse.success(data=result)
         except ValueError as e:
             return ApiResponse.error(message=f"{e}")

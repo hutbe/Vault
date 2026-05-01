@@ -49,6 +49,43 @@ class SensorDHT22(Base):
         }
 
 
+class EnvironmentReadings(Base):
+    __tablename__ = 'environment_readings'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    location_root_id = Column(Integer, nullable=False, comment='位置根节点ID')
+    location_id = Column(Integer, nullable=False, comment='位置ID')
+    sensor_id = Column(Integer, nullable=False, comment='传感器ID')
+    sensor_type = Column(Integer, nullable=False, comment='传感器类型')
+    temperature = Column(Numeric(8, 2), comment='温度(°C)')
+    humidity = Column(Numeric(8, 2), comment='湿度')
+    illuminance = Column(Numeric(10, 2), comment='光照')
+    pm25 = Column(Numeric(10, 2), comment='PM2.5')
+    co2 = Column(Numeric(10, 2), comment='二氧化碳')
+    hcho = Column(Numeric(10, 2), comment='甲醛')
+    tvoc = Column(Numeric(10, 2), comment='TVOC')
+    pressure = Column(Numeric(10, 2), comment='气压')
+    smoke_gas = Column(Numeric(10, 2), comment='烟雾气体')
+    created_at = Column(DateTime, nullable=False, comment='UTC时间')
+    created_at_iso = Column(String(33), nullable=False)
+    received_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
+                         server_default=text('UTC_TIMESTAMP()'), nullable=False, comment='记录接收时间')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'location_root_id': self.location_root_id,
+            'location_id': self.location_id,
+            'sensor_id': self.sensor_id,
+            'sensor_type': self.sensor_type,
+            'temperature': self.temperature,
+            'humidity': self.humidity,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'created_at_iso': self.created_at_iso,
+            'received_at': self.received_at.isoformat() if self.received_at else None,
+        }
+
+
 class Note(Base):
     __tablename__ = 'note'
 
