@@ -46,6 +46,6 @@ COPY docker-entrypoint.d/ /docker-entrypoint.d/
 
 RUN chmod +x /docker-entrypoint.d/*.sh
 
-EXPOSE 80 443 8000 8010 9000
+EXPOSE 80 443 8000 8010 9000 8050
 
 CMD ["nginx", "-g", "daemon off;"]
