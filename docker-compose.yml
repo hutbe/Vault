@@ -2,7 +2,7 @@
 services:
   app:
     # build: ./vault
-    image: stoull/vault-app:0.2
+    image: stoull/vault-app:0.3
     pull_policy: if_not_present
     container_name: vault-app
     restart: unless-stopped
