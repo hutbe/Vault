@@ -1,8 +1,8 @@
 
 services:
   app:
-    build: ./vault
-    # image: stoull/vault-app:latest
+    # build: ./vault
+    image: stoull/vault-app:0.2
     pull_policy: if_not_present
     container_name: vault-app
     restart: unless-stopped
@@ -22,16 +22,16 @@ services:
 
   mqtt_client:
     # build: ./mqtt_client
-    image: stoull/mqtt_client:latest
+    image: stoull/mqtt_client:0.3
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never
     container_name: mqtt_client
     restart: unless-stopped
     ports:
-      - "8020:8020"
+      - "8044:8044"
     env_file:
       - ./mqtt_client/.env
     volumes:
-      - ./mqtt_client/logs:/app/logs
+      # - ./mqtt_client/logs:/app/logs
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     networks:
@@ -82,6 +82,7 @@ services:
       - "443:443"
       - "8000:8000"
       - "8010:8010"
+      - "8050:8050"
       - "9000:9000"
     env_file:
         - ./nginx/.env

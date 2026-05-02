@@ -2,7 +2,7 @@
 set -e
 
 IMAGE_NAME="stoull/vault-nginx"
-TAG="0.1"
+TAG="0.3"
 CACHE_DIR="${HOME}/buildx-cache/vault-nginx"
 
 # 确保缓存目录存在

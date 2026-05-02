@@ -2,7 +2,7 @@
 set -e
 
 IMAGE_NAME="stoull/vault-app"
-TAG="0.1"
+TAG="0.3"
 CACHE_DIR="${HOME}/buildx-cache/vault-app"
 
 # 确保缓存目录存在

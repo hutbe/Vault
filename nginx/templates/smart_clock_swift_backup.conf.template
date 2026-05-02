@@ -33,7 +33,7 @@ server {
             return 204;
         }
 
-        proxy_pass http://mqtt_client;
+        proxy_pass http://mqtt_client:8044;
 
         # 代理头信息
         proxy_set_header Host $host;
