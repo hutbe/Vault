@@ -93,7 +93,16 @@ def read_current_climate(location_id):
                        "outdoors_temp": "",
                        "outdoors_feels_like": "",
                        "outdoors_humidity": "",
+                       "pressure": "",
+                       "clouds_all": "",
+                       "wind_speed": "",
                        "wind_deg": "",
+                       "wind_gust": "",
+                       "visibility": "",
+                       "rain_1h": "",
+                       "rain_3h": "",
+                       "snow_1h": "",
+                       "snow_3h": "",
                        "time_sensor": dht22_date_str,
                        "time_weather": weather_date_str,
                        "time_system_device": device_date_str,
@@ -113,7 +122,16 @@ def read_current_climate(location_id):
                 res_dic["outdoors_temp"] = weather.temp
                 res_dic["outdoors_feels_like"] = weather.feels_like
                 res_dic["outdoors_humidity"] = weather.humidity
+                res_dic["pressure"] = weather.pressure
+                res_dic["clouds_all"] = weather.clouds_all
+                res_dic["wind_speed"] = weather.wind_speed
                 res_dic["wind_deg"] = weather.wind_deg
+                res_dic["wind_gust"] = weather.wind_gust
+                res_dic["visibility"] = weather.visibility
+                res_dic["rain_1h"] = weather.rain_1h
+                res_dic["rain_3h"] = weather.rain_3h
+                res_dic["snow_1h"] = weather.snow_1h
+                res_dic["snow_3h"] = weather.snow_3h
 
             if sys_device:
                 res_dic["cup_temp"] = sys_device.cpu_temperature
