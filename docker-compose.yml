@@ -38,7 +38,8 @@ services:
       - app-network
 
   mariadb:
-    image: mariadb:latest
+    # image: mariadb:latest
+    image: mariadb:12.1.2-noble
     pull_policy: if_not_present  # 或者使用 if_not_present, always, never
     container_name: mariadb
     restart: unless-stopped
@@ -114,7 +115,7 @@ services:
     env_file:
       - .env
     environment:
-      - MOSQUITTO_USERNAME=admin
+      - MOSQUITTO_USERNAME=${MOSQUITTO_USERNAME}
       - MOSQUITTO_PASSWORD=${MOSQUITTO_PASSWORD}  # 从.env文件读取
     ports:
       - "${MQTT_PORT:-1883}:1883"     # MQTT
