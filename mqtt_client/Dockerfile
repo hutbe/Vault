@@ -56,7 +56,7 @@ WORKDIR /app
 
 # 创建必要的目录
 # 相对于WORKDIR的相对路径,即/app/shared_data
-RUN mkdir -p logs/server.log
+RUN mkdir -p logs/
 
 # 从构建阶段复制编译好的二进制文件
 COPY --from=builder /app/.build/release/MQTTServerApp* /app/
